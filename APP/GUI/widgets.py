@@ -1,6 +1,11 @@
+'''
+    File: widgets.py
+    Desciption: This is the file creats the tkinter GUI-- GUI LOGIC ONLY
+
+    By: Reegan Graham
+'''
 import tkinter as tk
 from tkinter import ttk
-
 
 RED = "#d92525"
 GREEN = "#16a34a"
