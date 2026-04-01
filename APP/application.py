@@ -4,7 +4,7 @@
 
     By: Reegan Graham
 '''
-from gui import LightboxGUI
+from gui import lightbox_gui
 from pcan_interface import PCANInterface
 from messages import MessageBuilder
 
@@ -12,7 +12,7 @@ class App:
     def __init__(self):
         self.can_bus = PCANInterface()
         self.msg_builder = MessageBuilder()
-        self.gui = LightboxGUI(controller=self)
+        self.gui = lightbox_gui(controller=self)
 
     def start(self):
         self.can_bus.initialize()

@@ -1,6 +1,6 @@
 '''
-    File: widgets.py
-    Desciption: This is the file creats the tkinter GUI-- GUI LOGIC ONLY
+    File: lightbox_gui.py
+    Desciption: This is the file creates the tkinter GUI-- GUI LOGIC ONLY
 
     By: Reegan Graham
 '''
