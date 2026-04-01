@@ -171,7 +171,7 @@ class LightboxGUI(tk.Tk):
         self._build_advanced_tab(advanced)
 
     def _card(self, parent, title, row, column, columnspan=1, rowspan=1, padx=10, pady=10):
-        shell = tk.Frame(parent, bg=BORDER, highlightthickness=0)
+        shell = tk.Frame(parent, bg=BORDER)
         shell.grid(row=row, column=column, columnspan=columnspan, rowspan=rowspan, sticky="nsew", padx=padx, pady=pady)
 
         container = tk.Frame(shell, bg=CARD)
@@ -247,7 +247,7 @@ class LightboxGUI(tk.Tk):
             parent.columnconfigure(i, weight=1)
 
         for col, label in enumerate(["IR", "HEADLIGHT", "SUNLIGHT"]):
-            tile = tk.Frame(parent, bg=CARD_SOFT, highlightbackground="#e5eaf1", highlightthickness=1, padx=12, pady=12)
+            tile = tk.Frame(parent, bg=CARD_SOFT, highlightbackground="#e5eaf1", padx=12, pady=12)
             tile.grid(row=0, column=col, padx=12, sticky="nsew")
             tile.columnconfigure(0, weight=0)
             tile.columnconfigure(1, weight=1)
