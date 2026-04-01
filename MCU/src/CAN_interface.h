@@ -1,0 +1,149 @@
+#ifndef CAN_INTERFACE_H
+#define CAN_INTERFACE_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "sdk_project_config.h"
+
+#define CAN_MESSAGE_ALL_ON  (255UL) // 0xFF
+#define CAN_MESSAGE_ALL_OFF (0UL)   // 0x00
+
+#define CAN_MESSAGE_1_ON  (1UL)  // 0x01
+#define CAN_MESSAGE_2_ON  (2UL)  // 0x02
+#define CAN_MESSAGE_3_ON  (3UL)  // 0x03
+#define CAN_MESSAGE_4_ON  (4UL)  // 0x04
+#define CAN_MESSAGE_5_ON  (5UL)  // 0x05
+#define CAN_MESSAGE_6_ON  (6UL)  // 0x06
+#define CAN_MESSAGE_7_ON  (7UL)  // 0x07
+#define CAN_MESSAGE_8_ON  (8UL)  // 0x08
+#define CAN_MESSAGE_9_ON  (9UL)  // 0x09
+#define CAN_MESSAGE_10_ON (10UL) // 0x0A
+#define CAN_MESSAGE_11_ON (11UL) // 0x0B
+#define CAN_MESSAGE_12_ON (12UL) // 0x0C
+#define CAN_MESSAGE_13_ON (13UL) // 0x0D
+#define CAN_MESSAGE_14_ON (14UL) // 0x0E
+#define CAN_MESSAGE_15_ON (15UL) // 0x0F
+#define CAN_MESSAGE_16_ON (16UL) // 0x10
+#define CAN_MESSAGE_17_ON (17UL) // 0x11
+#define CAN_MESSAGE_18_ON (18UL) // 0x12
+#define CAN_MESSAGE_19_ON (19UL) // 0x13
+#define CAN_MESSAGE_20_ON (20UL) // 0x14
+#define CAN_MESSAGE_21_ON (21UL) // 0x15
+#define CAN_MESSAGE_22_ON (22UL) // 0x16
+#define CAN_MESSAGE_23_ON (23UL) // 0x17
+#define CAN_MESSAGE_24_ON (24UL) // 0x18
+#define CAN_MESSAGE_25_ON (25UL) // 0x19
+#define CAN_MESSAGE_26_ON (26UL) // 0x1A
+#define CAN_MESSAGE_27_ON (27UL) // 0x1B
+#define CAN_MESSAGE_28_ON (28UL) // 0x1C
+#define CAN_MESSAGE_29_ON (29UL) // 0x1D
+#define CAN_MESSAGE_30_ON (30UL) // 0x1E
+#define CAN_MESSAGE_31_ON (31UL) // 0x1F
+#define CAN_MESSAGE_32_ON (32UL) // 0x20
+#define CAN_MESSAGE_33_ON (33UL) // 0x21
+#define CAN_MESSAGE_34_ON (34UL) // 0x22
+#define CAN_MESSAGE_35_ON (35UL) // 0x23
+#define CAN_MESSAGE_36_ON (36UL) // 0x24
+#define CAN_MESSAGE_37_ON (37UL) // 0x25
+#define CAN_MESSAGE_38_ON (38UL) // 0x26
+#define CAN_MESSAGE_39_ON (39UL) // 0x27
+#define CAN_MESSAGE_40_ON (40UL) // 0x28
+#define CAN_MESSAGE_41_ON (41UL) // 0x29
+#define CAN_MESSAGE_42_ON (42UL) // 0x2A
+
+#define CAN_MESSAGE_1_OFF  (43UL) // 0x2B
+#define CAN_MESSAGE_2_OFF  (44UL) // 0x2C
+#define CAN_MESSAGE_3_OFF  (45UL) // 0x2D
+#define CAN_MESSAGE_4_OFF  (46UL) // 0x2E
+#define CAN_MESSAGE_5_OFF  (47UL) // 0x2F
+#define CAN_MESSAGE_6_OFF  (48UL) // 0x30
+#define CAN_MESSAGE_7_OFF  (49UL) // 0x31
+#define CAN_MESSAGE_8_OFF  (50UL) // 0x32
+#define CAN_MESSAGE_9_OFF  (51UL) // 0x33
+#define CAN_MESSAGE_10_OFF (52UL) // 0x34
+#define CAN_MESSAGE_11_OFF (53UL) // 0x35
+#define CAN_MESSAGE_12_OFF (54UL) // 0x36
+#define CAN_MESSAGE_13_OFF (55UL) // 0x37
+#define CAN_MESSAGE_14_OFF (56UL) // 0x38
+#define CAN_MESSAGE_15_OFF (57UL) // 0x39
+#define CAN_MESSAGE_16_OFF (58UL) // 0x3A
+#define CAN_MESSAGE_17_OFF (59UL) // 0x3B
+#define CAN_MESSAGE_18_OFF (60UL) // 0x3C
+#define CAN_MESSAGE_19_OFF (61UL) // 0x3D
+#define CAN_MESSAGE_20_OFF (62UL) // 0x3E
+#define CAN_MESSAGE_21_OFF (63UL) // 0x3F
+#define CAN_MESSAGE_22_OFF (64UL) // 0x40
+#define CAN_MESSAGE_23_OFF (65UL) // 0x41
+#define CAN_MESSAGE_24_OFF (66UL) // 0x42
+#define CAN_MESSAGE_25_OFF (67UL) // 0x43
+#define CAN_MESSAGE_26_OFF (68UL) // 0x44
+#define CAN_MESSAGE_27_OFF (69UL) // 0x45
+#define CAN_MESSAGE_28_OFF (70UL) // 0x46
+#define CAN_MESSAGE_29_OFF (71UL) // 0x47
+#define CAN_MESSAGE_30_OFF (72UL) // 0x48
+#define CAN_MESSAGE_31_OFF (73UL) // 0x49
+#define CAN_MESSAGE_32_OFF (74UL) // 0x4A
+#define CAN_MESSAGE_33_OFF (75UL) // 0x4B
+#define CAN_MESSAGE_34_OFF (76UL) // 0x4C
+#define CAN_MESSAGE_35_OFF (77UL) // 0x4D
+#define CAN_MESSAGE_36_OFF (78UL) // 0x4E
+#define CAN_MESSAGE_37_OFF (79UL) // 0x4F
+#define CAN_MESSAGE_38_OFF (80UL) // 0x50
+#define CAN_MESSAGE_39_OFF (81UL) // 0x51
+#define CAN_MESSAGE_40_OFF (82UL) // 0x52
+#define CAN_MESSAGE_41_OFF (83UL) // 0x53
+#define CAN_MESSAGE_42_OFF (84UL) // 0x54
+
+#define CAN_MESSAGE_25mA  (85UL)  // 0x55
+#define CAN_MESSAGE_31mA  (113UL)  // 0x71
+#define CAN_MESSAGE_35mA  (86UL)  // 0x56
+#define CAN_MESSAGE_41mA  (114UL)  // 0x72
+#define CAN_MESSAGE_45mA  (87UL)  // 0x57
+#define CAN_MESSAGE_51mA  (115UL)  // 0x73
+#define CAN_MESSAGE_55mA  (88UL)  // 0x58
+#define CAN_MESSAGE_61mA  (116UL)  // 0x74
+#define CAN_MESSAGE_65mA  (89UL)  // 0x59
+#define CAN_MESSAGE_71mA  (117UL)  // 0x75
+#define CAN_MESSAGE_75mA  (90UL)  // 0x5A
+#define CAN_MESSAGE_81mA  (118UL)  // 0x76
+#define CAN_MESSAGE_85mA  (91UL)  // 0x5B
+#define CAN_MESSAGE_95mA  (92UL)  // 0x5C
+#define CAN_MESSAGE_100mA (93UL)  // 0x5D
+
+#define CAN_MESSAGE_DIV_EIGHTH  (94UL)  // 0x5E
+#define CAN_MESSAGE_DIV_HALF    (95UL)  // 0x5F
+#define CAN_MESSAGE_DIV_QUARTER (96UL)  // 0x60
+#define CAN_MESSAGE_DIV_DEFAULT (97UL)  // 0x61
+
+#define CAN_MESSAGE_INCREASE_BRIGHTNESS_1   (98UL)  // 0x62
+#define CAN_MESSAGE_INCREASE_BRIGHTNESS_5   (99UL)  // 0x63
+#define CAN_MESSAGE_INCREASE_BRIGHTNESS_10  (100UL) // 0x64
+#define CAN_MESSAGE_INCREASE_BRIGHTNESS_50  (101UL) // 0x65
+#define CAN_MESSAGE_INCREASE_BRIGHTNESS_100 (102UL) // 0x66
+
+#define CAN_MESSAGE_DECREASE_BRIGHTNESS_1   (103UL) // 0x67
+#define CAN_MESSAGE_DECREASE_BRIGHTNESS_5   (104UL) // 0x68
+#define CAN_MESSAGE_DECREASE_BRIGHTNESS_10  (105UL) // 0x69
+#define CAN_MESSAGE_DECREASE_BRIGHTNESS_50  (106UL) // 0x6A
+#define CAN_MESSAGE_DECREASE_BRIGHTNESS_100 (107UL) // 0x6B
+
+
+#define CAN_MESSAGE_PWM_88 (108UL)  // 0x6C
+#define CAN_MESSAGE_PWM_105 (109UL)  // 0x6D
+#define CAN_MESSAGE_PWM_148 (110UL)  // 0x6E
+#define CAN_MESSAGE_PWM_288 (111UL)  // 0x6F
+#define CAN_MESSAGE_PWM_LOW (112UL) // 0x70
+
+#define CAN_MESSAGE_MICRO_TEMP (120UL) // 78
+#define CAN_MESSAGE_DRIVER_TEMP (121UL) //79
+#define CAN_MESSAGE_BACK_TEMP (122UL)  //7A
+
+#define TX_MAILBOX  (1UL)
+#define TX_MSG_ID   (1UL)
+#define RX_MAILBOX  (0UL)
+#define RX_MSG_ID   (2UL)
+
+void CAN_InitInterface(uint32_t rx_msg_id);
+void CAN_ProcessReceivedMessage(uint32_t rx_msg_id);
+
+#endif // CAN_INTERFACE_H
