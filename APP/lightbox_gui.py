@@ -60,6 +60,7 @@ class LightboxGUI(tk.Tk):
         self._build_header()
         self._build_notebook()
 
+
     def _configure_styles(self):
         self.style.configure("App.TFrame", background=BG)
 
@@ -361,12 +362,31 @@ class LightboxGUI(tk.Tk):
         ttk.Button(parent, text="Set", style="Set.TButton").grid(row=2, column=1, sticky="w", pady=(18, 0), ipadx=8, ipady=4)
 
     def _build_status_section(self, parent):
-        items = ["Connection Status", "CAN Bus Initialization", "Invalid Input"]
-        for i, item in enumerate(items):
+        self.status_dots = {}
+
+        items = [
+            ("connection", "Connection Status"),
+            ("can_init", "CAN Bus Initialization"),
+            ("invalid_input", "Invalid Input")
+        ]
+
+        for key, label_text in items:
             row = tk.Frame(parent, bg=CARD)
             row.pack(fill="x", pady=10)
-            StatusDot(row, size=18, color=RED, bg=CARD).pack(side="left", padx=(6, 14))
-            tk.Label(row, text=item, bg=CARD, fg=TEXT, font=("Segoe UI", 14)).pack(side="left")
+
+            dot = StatusDot(row, size=18, color=RED, bg=CARD)
+            dot.pack(side="left", padx=(6, 14))
+
+            tk.Label(
+                row,
+                text=label_text,
+                bg=CARD,
+                fg=TEXT,
+                font=("Segoe UI", 14)
+            ).pack(side="left")
+
+            # store the SAME dot you displayed
+            self.status_dots[key] = dot
 
     def _build_optometer_section(self, parent):
         parent.columnconfigure(0, weight=1)
@@ -405,7 +425,9 @@ class LightboxGUI(tk.Tk):
             parent.columnconfigure(i, weight=1)
 
         tk.Label(parent, text="Node Address", bg=CARD, fg=TEXT, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w")
-        self._entry_with_unit(parent, 0, 1)
+        self.node_address_entry = ttk.Entry(parent, font=("Segoe UI", 14))
+        self.node_address_entry.grid(row=0, column=1, sticky="ew", padx=(0, 20))
+
         tk.Label(parent, text="Sent Value", bg=CARD, fg=MUTED, font=("Segoe UI", 15)).grid(row=0, column=2, sticky="w")
         self._value_box(parent, text="0", width=170, height=54).grid(row=0, column=3, sticky="w")
 
@@ -413,8 +435,20 @@ class LightboxGUI(tk.Tk):
         btns.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(24, 18))
         btns.columnconfigure(0, weight=1)
         btns.columnconfigure(1, weight=1)
-        ttk.Button(btns, text="Turn ON", style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(0, 12))
-        ttk.Button(btns, text="Turn OFF", style="Primary.TButton").grid(row=0, column=1, sticky="ew", padx=(12, 0))
+
+        ttk.Button(
+            btns,
+            text="Turn ON",
+            style="Primary.TButton",
+            command=self._handle_turn_on
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 12))
+
+        ttk.Button(
+            btns,
+            text="Turn OFF",
+            style="Primary.TButton",
+            command=self._handle_turn_off
+        ).grid(row=0, column=1, sticky="ew", padx=(12, 0))
 
         self._advanced_row(parent, 2, "Temperature Request", button_text="Get", unit="°C")
         self._advanced_row(parent, 3, "Current", unit="mA")
@@ -458,7 +492,17 @@ class LightboxGUI(tk.Tk):
         self._value_box(parent, text="0", width=170, height=56).grid(row=1, column=2, sticky="w")
         ttk.Button(parent, text="Apply", style="Apply.TButton").grid(row=2, column=1, sticky="w", pady=(16, 0))
 
+    def set_status_dot(self, name, color):
+        self.status_dots[name].set_color(color)
 
-if __name__ == "__main__":
-    app = LightboxGUI()
-    app.mainloop()
+    def _handle_turn_on(self):
+        node_text = self.node_address_entry.get()
+        self.controller.turn_on_node(node_text)
+
+    def _handle_turn_off(self):
+        node_text = self.node_address_entry.get()
+        self.controller.turn_off_node(node_text)
+
+# if __name__ == "__main__":
+#     app = LightboxGUI()
+#     app.mainloop()

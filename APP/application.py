@@ -4,47 +4,22 @@
 
     By: Reegan Graham
 '''
-from gui import lightbox_gui
+from lightbox_gui import LightboxGUI
+from lightbox_controller import LightboxController
 from pcan_interface import PCANInterface
-from messages import MessageBuilder
 
-class App:
-    def __init__(self):
-        self.can_bus = PCANInterface()
-        self.msg_builder = MessageBuilder()
-        self.gui = lightbox_gui(controller=self)
+def main():
+    gui = LightboxGUI()
+    can = PCANInterface()
+    controller = LightboxController(gui, can)
 
-    def start(self):
-        self.can_bus.initialize()
-        self.gui.mainloop()
-        self.can_bus.shutdown()
+    # give GUI access to controller
+    gui.controller = controller
 
-    # Example GUI callback methods
-    def enable_ir(self):
-        msg = self.msg_builder.enable_source("IR")
-        self.can_bus.send_message(msg)
+    # initialize CAN on startup
+    controller.initialize_can()
 
-    def disable_ir(self):
-        msg = self.msg_builder.disable_source("IR")
-        self.can_bus.send_message(msg)
-
-    def set_ambient(self, value):
-        msg = self.msg_builder.set_ambient(value)
-        self.can_bus.send_message(msg)
-
-    def set_glare(self, value):
-        msg = self.msg_builder.set_glare(value)
-        self.can_bus.send_message(msg)
-
-    def set_fan_speed(self, value):
-        msg = self.msg_builder.set_fan_speed(value)
-        self.can_bus.send_message(msg)
-
-    def request_temperature(self, node):
-        msg = self.msg_builder.request_temperature(node)
-        self.can_bus.send_message(msg)
-
+    gui.mainloop()
 
 if __name__ == "__main__":
-    app = App()
-    app.start()
+    main()
