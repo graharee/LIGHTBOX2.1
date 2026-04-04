@@ -14,18 +14,18 @@ class LightboxController:
         try:
             self.can.initialize()
 
-            # success → turn dot green
-            self.gui.set_status_dot("can_init", "green")
+            # success → dont't change dot
+            self.gui.set_status_dot("can_init", "red")
 
         except RuntimeError as e:
             print(e)
 
-            # failure → keep/turn dot red
-            self.gui.set_status_dot("can_init", "red")
+            # failure → turn dot green
+            self.gui.set_status_dot("can_init", "green")
     
     def turn_on_node(self, node_text):
         try:
-            can_id = int(node_text, 16)   # converts "0x02" to 2
+            can_id = int(node_text, 16)   # converts hex to decimal
             self.can.send_message(can_id, [0x01])
         except ValueError:
             self.gui.set_status_dot("invalid_input", "red")
@@ -34,8 +34,8 @@ class LightboxController:
 
     def turn_off_node(self, node_text):
         try:
-            can_id = int(node_text, 16)   # converts "0x02" to 2
-            self.can.send_message(can_id, [0x00])
+            can_id = int(node_text, 16)   # converts hex to decimal
+            self.can.send_message(can_id, [0x2B])
         except ValueError:
             self.gui.set_status_dot("invalid_input", "red")
         except RuntimeError:
