@@ -46,6 +46,7 @@ class LightboxGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Magna Lightbox 2.1")
+        self.iconbitmap("lightbox.png")
         self.geometry("1560x900")
         self.minsize(1460, 860)
         self.configure(bg=BG)
@@ -151,15 +152,7 @@ class LightboxGUI(tk.Tk):
             bg=RED,
             fg="white",
             font=("Segoe UI", 30, "bold"),
-        ).pack(side="left", padx=24, pady=18)
-
-        tk.Label(
-            header,
-            text="Control Interface",
-            bg=RED,
-            fg="#ffe5e5",
-            font=("Segoe UI", 13, "bold"),
-        ).pack(side="right", padx=24)
+        ).pack(expand=True, pady=18)
 
     def _build_notebook(self):
         outer = ttk.Frame(self, style="App.TFrame", padding=(18, 16, 18, 18))
@@ -170,11 +163,15 @@ class LightboxGUI(tk.Tk):
 
         basic = ttk.Frame(notebook, style="App.TFrame")
         advanced = ttk.Frame(notebook, style="App.TFrame")
+        calibration  = ttk.Frame(notebook, style="App.TFrame")
+
         notebook.add(basic, text="Basic")
         notebook.add(advanced, text="Advanced")
+        notebook.add(calibration, text="Calibration")
 
         self._build_basic_tab(basic)
         self._build_advanced_tab(advanced)
+        self._build_calibration_tab(calibration)
 
     def _card(self, parent, title, row, column, columnspan=1, rowspan=1, padx=10, pady=10):
         shell = tk.Frame(parent, bg=BORDER)
@@ -236,60 +233,63 @@ class LightboxGUI(tk.Tk):
         self._build_source_selector(source)
 
         ambient = self._card(tab, "Visible Ambient Adjustment", 1, 0, columnspan=7, rowspan=3)
-        self._build_adjustment_section(ambient, "Target Ambient Value")
+        self._build_adjustment_section(ambient, "Visible Ambient Value")
 
-        status = self._card(tab, "System Status", 1, 7, columnspan=5, rowspan=3)
+        status = self._card(tab, "Faults", 1, 7, columnspan=5, rowspan=3)
         self._build_status_section(status)
 
         glare = self._card(tab, "Visible Glare Adjustment", 4, 0, columnspan=7, rowspan=3)
-        self._build_adjustment_section(glare, "Target Glare Value")
+        self._build_adjustment_section(glare, "Visible Glare Value")
 
         optometer = self._card(tab, "Optometer Readings", 4, 7, columnspan=5, rowspan=3)
         self._build_optometer_section(optometer)
 
     def _build_source_selector(self, parent):
         self.source_buttons = {}
-        for i in range(3):
-            parent.columnconfigure(i, weight=1)
 
-        for col, label in enumerate(["IR", "HEADLIGHT", "SUNLIGHT"]):
-            tile = tk.Frame(parent, bg=CARD_SOFT, highlightbackground="#e5eaf1", padx=12, pady=12)
-            tile.grid(row=0, column=col, padx=12, sticky="nsew")
+        labels = ["IR (850nm)", "IR (940nm)", "HEADLIGHT", "SUNLIGHT"]
+
+        for i in range(4):
+            parent.columnconfigure(i, weight=1, uniform="node")
+
+        for col, label in enumerate(labels):
+            tile = tk.Frame(parent, bg=CARD, padx=8, pady=8)
+            tile.grid(row=0, column=col, padx=10, sticky="nsew")
             tile.columnconfigure(0, weight=0)
             tile.columnconfigure(1, weight=1)
             tile.columnconfigure(2, weight=0)
 
-            dot = StatusDot(tile, size=18, color=RED, bg=CARD_SOFT)
-            dot.grid(row=0, column=0, padx=(12, 14), pady=10)
+            dot = StatusDot(tile, size=18, color=RED, bg=CARD)
+            dot.grid(row=0, column=0, padx=(4, 10), pady=6)
             self.source_dots[label] = dot
 
             tk.Label(
                 tile,
                 text=label,
-                bg=CARD_SOFT,
+                bg=CARD,
                 fg=TEXT,
-                font=("Segoe UI", 14, "bold"),
+                font=("Segoe UI", 13, "bold"),
                 anchor="w",
             ).grid(row=0, column=1, sticky="w")
 
             button = tk.Button(
                 tile,
-                text="Enable",
-                font=("Segoe UI", 12, "bold"),
+                text="ON",
+                font=("Segoe UI", 11, "bold"),
                 bg=BUTTON_BG,
                 fg=TEXT,
                 activebackground=BUTTON_ACTIVE,
                 activeforeground=TEXT,
-                relief="flat",
-                bd=0,
+                relief="raised",
+                bd=1,
                 cursor="hand2",
-                width=12,
-                padx=12,
-                pady=10,
+                width=5,
+                padx=6,
+                pady=4,
                 command=lambda name=label: self._toggle_source(name),
             )
+            button.grid(row=0, column=2, padx=(10, 0), sticky="e")
 
-            button.grid(row=0, column=2, padx=(20, 10), pady=6, sticky="e")
             self.source_buttons[label] = button
             self.source_states[label] = False
 
@@ -299,7 +299,7 @@ class LightboxGUI(tk.Tk):
         if not current_state:
             self.source_dots[source_name].set_color(GREEN, "#15803d")
             self.source_buttons[source_name].configure(
-                text="Disable",
+                text="OFF",
                 bg=BLUE,
                 fg="white",
                 activebackground="#1d4ed8",
@@ -310,12 +310,12 @@ class LightboxGUI(tk.Tk):
         else:
             self.source_dots[source_name].set_color(RED, "#b91c1c")
             self.source_buttons[source_name].configure(
-                text="Enable",
+                text="ON",
                 bg=BUTTON_BG,
                 fg=TEXT,
                 activebackground=BUTTON_ACTIVE,
                 activeforeground=TEXT,
-                relief="flat"
+                relief="raised"
             )
             self.source_states[source_name] = False
 
@@ -366,8 +366,9 @@ class LightboxGUI(tk.Tk):
 
         items = [
             ("connection", "Connection Status"),
-            ("can_init", "CAN Bus Initialization"),
-            ("invalid_input", "Invalid Input")
+            ("can_init", "CAN Bus Failed Initialization"),
+            ("invalid_input", "Invalid Input"),
+            ("calibration_status", "Calibration Status"),
         ]
 
         for key, label_text in items:
@@ -406,8 +407,8 @@ class LightboxGUI(tk.Tk):
         for i in range(7):
             tab.rowconfigure(i, weight=1)
 
-        node = self._card(tab, "LED Node Control", 0, 0, columnspan=7, rowspan=6)
-        fan = self._card(tab, "Fan Speed Adjustment", 0, 7, columnspan=5, rowspan=2)
+        node = self._card(tab, "LED Node Adjustment", 0, 0, columnspan=7, rowspan=7)
+        fan = self._card(tab, "Fan PWM Adjustment", 0, 7, columnspan=5, rowspan=2)
 
         self._build_node_control(node)
         self._build_fan_control(fan)
@@ -424,40 +425,142 @@ class LightboxGUI(tk.Tk):
         for i in range(4):
             parent.columnconfigure(i, weight=1)
 
-        tk.Label(parent, text="Node Address", bg=CARD, fg=TEXT, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w")
-        self.node_address_entry = ttk.Entry(parent, font=("Segoe UI", 14))
-        self.node_address_entry.grid(row=0, column=1, sticky="ew", padx=(0, 20))
+        # ---------------- Top Row: Node Address / LED Address ----------------
+        tk.Label(
+            parent,
+            text="Node\nAddress",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 13, "bold"),
+            justify="center"
+        ).grid(row=0, column=0, sticky="nsew", pady=(8, 4))
 
-        tk.Label(parent, text="Sent Value", bg=CARD, fg=MUTED, font=("Segoe UI", 15)).grid(row=0, column=2, sticky="w")
-        self._value_box(parent, text="0", width=170, height=54).grid(row=0, column=3, sticky="w")
+        self.node_address_entry = ttk.Entry(parent, font=("Segoe UI", 14))
+        self.node_address_entry.grid(row=0, column=1, sticky="", padx=(40, 20), pady=(0, 12), ipady=6)
+
+        tk.Label(
+            parent, 
+            text="LED\nAddress", 
+            bg=CARD, 
+            fg=TEXT, 
+            font=("Segoe UI", 13, "bold"), 
+            justify="center"
+        ).grid(row=0, column=2, sticky="nsew", pady=(8, 12))
+
+        self.led_address_entry = ttk.Entry(parent, font=("Segoe UI", 14))
+        self.led_address_entry.grid(row=0, column=3, sticky="",  padx=(20, 10), pady=(0, 12), ipady=6)
+
+        # ---------------- ON / OFF Buttons ----------------
+        sep1 = tk.Frame(parent, bg="#edf2f7", height=1)
+        sep1.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(2, 18))
 
         btns = tk.Frame(parent, bg=CARD)
-        btns.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(24, 18))
+        btns.grid(row=2, column=0, columnspan=4, sticky="ew", pady=(0, 18))
         btns.columnconfigure(0, weight=1)
         btns.columnconfigure(1, weight=1)
 
         ttk.Button(
             btns,
-            text="Turn ON",
+            text="ON",
             style="Primary.TButton",
             command=self._handle_turn_on
-        ).grid(row=0, column=0, sticky="ew", padx=(0, 12))
+        ).grid(row=0, column=0, sticky="ew", padx=(20, 20), ipadx=8, ipady=14)
 
         ttk.Button(
             btns,
-            text="Turn OFF",
+            text="OFF",
             style="Primary.TButton",
             command=self._handle_turn_off
-        ).grid(row=0, column=1, sticky="ew", padx=(12, 0))
+        ).grid(row=0, column=1, sticky="ew", padx=(20, 20), ipadx=8, ipady=14)
 
-        self._advanced_row(parent, 2, "Temperature Request", button_text="Get", unit="°C")
-        self._advanced_row(parent, 3, "Current", unit="mA")
-        self._advanced_row(parent, 4, "PWM", unit="%")
+        # ---------------- Temperature Request ----------------
+        sep2 = tk.Frame(parent, bg="#edf2f7", height=1)
+        sep2.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(0, 18))
 
+        tk.Label(parent, text="Temperature Request", bg=CARD, fg=TEXT, font=("Segoe UI", 13, "bold")).grid(
+            row=4, column=0, sticky="w", pady=(4, 10)
+        )
+
+        tk.Button(
+            parent,
+            text="GET",
+            font=("Segoe UI", 13, "bold"),
+            bg=BUTTON_BG,
+            fg=TEXT,
+            activebackground=BUTTON_ACTIVE,
+            activeforeground=TEXT,
+            relief="raised",
+            bd=1,
+            cursor="hand2",
+            width=5,
+            pady=8
+        ).grid(row=4, column=1, sticky="w", padx=(0, 20), pady=(4, 10))
+
+        temp_wrap = tk.Frame(parent, bg=CARD)
+        temp_wrap.grid(row=4, column=2, columnspan=2, sticky="w", pady=(4, 10))
+        self._value_box(temp_wrap, text="0", width=170, height=56, font=("Segoe UI", 20, "bold")).pack(side="left")
+        tk.Label(temp_wrap, text="°C", bg=CARD, fg=TEXT, font=("Segoe UI", 18, "bold")).pack(side="left", padx=(12, 0))
+
+        # ---------------- Current ----------------
+        sep3 = tk.Frame(parent, bg="#edf2f7", height=1)
+        sep3.grid(row=5, column=0, columnspan=4, sticky="ew", pady=(0, 18))
+
+        tk.Label(parent, text="Current", bg=CARD, fg=TEXT, font=("Segoe UI", 13, "bold")).grid(
+            row=6, column=0, sticky="w", pady=(4, 10)
+        )
+
+        current_entry_wrap = tk.Frame(parent, bg=CARD)
+        current_entry_wrap.grid(row=6, column=1, sticky="ew", padx=(0, 20), pady=(4, 10))
+        current_entry_wrap.columnconfigure(0, weight=1)
+        self.current_entry = ttk.Entry(current_entry_wrap, font=("Segoe UI", 14))
+        self.current_entry.grid(row=0, column=0, sticky="ew")
+
+        tk.Label(current_entry_wrap, text="mA", bg=CARD, fg=MUTED, font=("Segoe UI", 12)).grid(row=0, column=1, padx=(8,0))
+        current_sent_wrap = tk.Frame(parent, bg=CARD)
+        current_sent_wrap.grid(row=6, column=3, sticky="w", pady=(4, 10))
+
+        self._value_box(current_sent_wrap, text="0", width=170, height=56, font=("Segoe UI", 20, "bold")).pack(side="left")
+
+        tk.Label(
+            current_sent_wrap,
+            text="mA",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 12)
+        ).pack(side="left", padx=(10, 0))
+
+        # ---------------- PWM ----------------
+        sep4 = tk.Frame(parent, bg="#edf2f7", height=1)
+        sep4.grid(row=7, column=0, columnspan=4, sticky="ew", pady=(0, 18))
+
+        tk.Label(parent, text="PWM", bg=CARD, fg=TEXT, font=("Segoe UI", 13, "bold")).grid(
+            row=8, column=0, sticky="w", pady=(4, 10)
+        )
+
+        pwm_entry_wrap = tk.Frame(parent, bg=CARD)
+        pwm_entry_wrap.grid(row=8, column=1, sticky="ew", padx=(0, 20), pady=(4, 10))
+        pwm_entry_wrap.columnconfigure(0, weight=1)
+        self.pwm_entry = ttk.Entry(pwm_entry_wrap, font=("Segoe UI", 14))
+        self.pwm_entry.grid(row=0, column=0, sticky="ew")
+
+        tk.Label(pwm_entry_wrap, text="%", bg=CARD, fg=MUTED, font=("Segoe UI", 12)).grid(row=0, column=1, padx=(8,0))
+
+        pwm_sent_wrap = tk.Frame(parent, bg=CARD)
+        pwm_sent_wrap.grid(row=8, column=3, sticky="w", pady=(4, 10))
+
+        self._value_box(pwm_sent_wrap, text="0", width=170, height=56, font=("Segoe UI", 20, "bold")).pack(side="left")
+
+        tk.Label(
+            pwm_sent_wrap,
+            text="%",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 14)
+        ).pack(side="left", padx=(10, 0))
+        
     def _advanced_row(self, parent, row, title, unit, button_text=None):
         sep = tk.Frame(parent, bg="#edf2f7", height=1)
         sep.grid(row=row * 2 - 1, column=0, columnspan=4, sticky="ew", pady=(8, 14))
-
         tk.Label(parent, text=title, bg=CARD, fg=TEXT, font=("Segoe UI", 11, "bold")).grid(row=row * 2, column=0, sticky="w")
         if button_text:
             ttk.Button(parent, text=button_text, style="Primary.TButton").grid(row=row * 2, column=1, sticky="w")
@@ -467,7 +570,6 @@ class LightboxGUI(tk.Tk):
             tk.Label(parent, text="Sent Value", bg=CARD, fg=MUTED, font=("Segoe UI", 15)).grid(row=row * 2, column=2, sticky="w")
         else:
             tk.Label(parent, bg=CARD, fg=MUTED, font=("Segoe UI", 15)).grid(row=row * 2, column=2, sticky="w")
-
         wrap = tk.Frame(parent, bg=CARD)
         wrap.grid(row=row * 2, column=3, sticky="w")
         self._value_box(wrap, text="0", width=150, height=52, font=("Segoe UI", 17, "bold")).pack(side="left")
@@ -503,6 +605,134 @@ class LightboxGUI(tk.Tk):
         node_text = self.node_address_entry.get()
         self.controller.turn_off_node(node_text)
 
-# if __name__ == "__main__":
-#     app = LightboxGUI()
-#     app.mainloop()
+    def _build_calibration_tab(self, tab):
+        for i in range(12):
+            tab.columnconfigure(i, weight=1, uniform="cal")
+        for i in range(8):
+            tab.rowconfigure(i, weight=0)
+
+        # keep everything near the top like the mockup
+        tab.rowconfigure(3, weight=1)
+
+        cal_card = self._card(tab, "Calibration", 0, 0, columnspan=7, rowspan=3, padx=10, pady=10)
+        self._build_calibration_main(cal_card)
+
+        notes_card = self._card(tab, "Calibration Notes", 0, 7, columnspan=5, rowspan=2, padx=10, pady=10)
+        self._build_calibration_notes(notes_card)
+
+    def _build_calibration_main(self, parent):
+        for i in range(2):
+            parent.columnconfigure(i, weight=1, uniform="calmain")
+        for i in range(3):
+            parent.rowconfigure(i, weight=0)
+
+        # -------- Row 1: Start Calibration --------
+        tk.Label(
+            parent,
+            text="Start Calibration",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 18, "bold")
+        ).grid(row=0, column=0, sticky="w", padx=(40, 20), pady=(16, 16))
+
+        self.start_cal_button = tk.Button(
+            parent,
+            text="START",
+            font=("Segoe UI", 24, "bold"),
+            bg="#d9d9d9",
+            fg="black",
+            activebackground="#cfcfcf",
+            activeforeground="black",
+            relief="raised",
+            bd=1,
+            cursor="hand2",
+            width=20,
+            pady=6,
+            command=self._handle_start_calibration
+        )
+        self.start_cal_button.grid(row=0, column=1, sticky="w", padx=(10, 20), pady=(12, 12))
+
+        tk.Frame(parent, bg="#edf2f7", height=1).grid(
+            row=1, column=0, columnspan=2, sticky="ew", pady=(0, 0)
+        )
+
+        # -------- Row 2: Status --------
+        status_label = tk.Label(
+            parent,
+            text="Status",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 18, "bold")
+        )
+        status_label.grid(row=2, column=0, sticky="w", padx=(40, 20), pady=(18, 18))
+
+        self.cal_status_box = self._value_box(
+            parent,
+            text="IN PROGRESS",
+            width=390,
+            height=85,
+            font=("Segoe UI", 18, "bold")
+        )
+        self.cal_status_box.grid(row=2, column=1, sticky="w", padx=(10, 20), pady=(12, 12))
+
+        tk.Frame(parent, bg="#edf2f7", height=1).grid(
+            row=3, column=0, columnspan=2, sticky="ew", pady=(0, 0)
+        )
+
+        # -------- Row 3: Faults --------
+        faults_label = tk.Label(
+            parent,
+            text="Faults",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 18, "bold")
+        )
+        faults_label.grid(row=4, column=0, sticky="w", padx=(40, 20), pady=(18, 18))
+
+        self.cal_faults_box = self._value_box(
+            parent,
+            text="FAILED",
+            width=390,
+            height=85,
+            font=("Segoe UI", 18, "bold")
+        )
+        self.cal_faults_box.grid(row=4, column=1, sticky="w", padx=(10, 20), pady=(12, 12))
+
+    def _build_calibration_notes(self, parent):
+        notes_text = (
+            "* Ensure GPIB-USB-HS is connected\n"
+            "* DO NOT try to adjust lightbox until\n"
+            "  calibration is complete\n"
+            "* other notes needed"
+        )
+
+        tk.Label(
+            parent,
+            text=notes_text,
+            justify="left",
+            anchor="nw",
+            bg=CARD,
+            fg="black",
+            font=("Segoe UI", 13, "bold"),
+        ).pack(anchor="nw", padx=12, pady=10)
+
+    def _handle_start_calibration(self):
+        print("Calibration started")
+
+    def _value_box(self, parent, text="0", width=170, height=54, font=("Segoe UI", 15, "bold")):
+        frame = tk.Frame(parent, bg="#b9c4d3", width=width, height=height)
+        frame.pack_propagate(False)
+        frame.grid_propagate(False)
+
+        inner = tk.Frame(frame, bg=VALUE_BG)
+        inner.pack(fill="both", expand=True, padx=1, pady=1)
+
+        label = tk.Label(inner, text=text, bg=VALUE_BG, fg="#0f2d5c", font=font)
+        label.pack(expand=True)
+
+        frame.value_label = label
+        return frame
+    
+if __name__ == "__main__":
+    app = LightboxGUI()
+    app.mainloop()
