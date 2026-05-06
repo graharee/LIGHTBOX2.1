@@ -456,7 +456,6 @@ void MBI6353Q_SetCurrentDivide(uint8_t currentDivide)
     LPSPI_DRV_MasterTransferBlocking(INST_LPSPI_1, sendSingleWrite, receiveSingleWrite, SINGLE_WRITE_SIZE, TIMEOUT);
 }
 
-
 void ReadConfigCommand(uint8_t *u8p_buffer)
 {
     MBI6353Q_CreateBurstCmd(&read_config, u8p_buffer);
