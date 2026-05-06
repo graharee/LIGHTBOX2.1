@@ -46,7 +46,8 @@ class LightboxGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Magna Lightbox 2.1")
-        self.iconbitmap("lightbox.png")
+        icon = tk.PhotoImage(file="logo.png")
+        self.iconphoto(True, icon)
         self.geometry("1560x900")
         self.minsize(1460, 860)
         self.configure(bg=BG)
@@ -440,7 +441,7 @@ class LightboxGUI(tk.Tk):
 
         tk.Label(
             parent, 
-            text="LED\nAddress", 
+            text="LED #\n(1-42)", 
             bg=CARD, 
             fg=TEXT, 
             font=("Segoe UI", 13, "bold"), 
@@ -493,13 +494,29 @@ class LightboxGUI(tk.Tk):
             bd=1,
             cursor="hand2",
             width=5,
-            pady=8
+            pady=8,
+            command=self._handle_node_temp
         ).grid(row=4, column=1, sticky="w", padx=(0, 20), pady=(4, 10))
 
         temp_wrap = tk.Frame(parent, bg=CARD)
         temp_wrap.grid(row=4, column=2, columnspan=2, sticky="w", pady=(4, 10))
-        self._value_box(temp_wrap, text="0", width=170, height=56, font=("Segoe UI", 20, "bold")).pack(side="left")
-        tk.Label(temp_wrap, text="°C", bg=CARD, fg=TEXT, font=("Segoe UI", 18, "bold")).pack(side="left", padx=(12, 0))
+
+        self.node_temp_box = self._value_box(
+            temp_wrap,
+            text="0",
+            width=170,
+            height=56,
+            font=("Segoe UI", 20, "bold")
+        )
+        self.node_temp_box.pack(side="left")
+
+        tk.Label(
+            temp_wrap,
+            text="°C",
+            bg=CARD,
+            fg=TEXT,
+            font=("Segoe UI", 18, "bold")
+        ).pack(side="left", padx=(12, 0))
 
         # ---------------- Current ----------------
         sep3 = tk.Frame(parent, bg="#edf2f7", height=1)
@@ -598,12 +615,21 @@ class LightboxGUI(tk.Tk):
         self.status_dots[name].set_color(color)
 
     def _handle_turn_on(self):
-        node_text = self.node_address_entry.get()
-        self.controller.turn_on_node(node_text)
+        node_address = self.node_address_entry.get()
+        led_address = self.led_address_entry.get() # add logic for whole panel gets updated if no led address is specified
+        self.controller.turn_on_node(node_address, led_address)
 
     def _handle_turn_off(self):
-        node_text = self.node_address_entry.get()
-        self.controller.turn_off_node(node_text)
+        node_address = self.node_address_entry.get()
+        led_address = self.led_address_entry.get()
+        self.controller.turn_off_node(node_address, led_address)
+
+    def _handle_node_temp(self):
+        node_address = self.node_address_entry.get()
+        self.controller.get_node_temp(node_address)
+
+    def set_node_temperature(self, value):
+        self.node_temp_box.value_label.config(text=str(value))
 
     def _build_calibration_tab(self, tab):
         for i in range(12):
@@ -733,6 +759,6 @@ class LightboxGUI(tk.Tk):
         frame.value_label = label
         return frame
     
-if __name__ == "__main__":
-    app = LightboxGUI()
-    app.mainloop()
+# if __name__ == "__main__":
+#     app = LightboxGUI()
+#     app.mainloop()

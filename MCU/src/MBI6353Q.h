@@ -328,7 +328,7 @@ typedef enum
 	    mbi6353q_71_87mA = 0x96u,
 	    mbi6353q_72_16mA = 0x97u,
 	    mbi6353q_72_45mA = 0x98u,
-	    mbi6353q_70mA = 0x99u,
+	    mbi6353q_70mA = 0x99u, // added this 4/23/2026
 	    mbi6353q_73mA = 0x9Au,
 	    mbi6353q_73_29mA = 0x9Bu,
 	    mbi6353q_73_58mA = 0x9Cu,

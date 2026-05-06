@@ -405,6 +405,9 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id) {
 			case CAN_MESSAGE_65mA:
 				  MBI6353Q_SetCurrent(mbi6353q_65mA);
 				  break;
+            case CAN_MESSAGE_70mA: // added here 4/23/2026
+				  MBI6353Q_SetCurrent(mbi6353q_70mA);
+				  break;
 			case CAN_MESSAGE_71mA:
 				  MBI6353Q_SetCurrent(mbi6353q_71mA);
 				  break;

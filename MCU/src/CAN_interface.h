@@ -103,6 +103,7 @@
 #define CAN_MESSAGE_55mA  (88UL)  // 0x58
 #define CAN_MESSAGE_61mA  (116UL)  // 0x74
 #define CAN_MESSAGE_65mA  (89UL)  // 0x59
+#define CAN_MESSAGE_70mA  (124UL)  // 0x7C // added here 4/23/2026
 #define CAN_MESSAGE_71mA  (117UL)  // 0x75
 #define CAN_MESSAGE_75mA  (90UL)  // 0x5A
 #define CAN_MESSAGE_81mA  (118UL)  // 0x76
