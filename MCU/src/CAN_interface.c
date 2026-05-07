@@ -24,6 +24,9 @@
 #define NUM_LEDS    42u
 #define MIN_CURRENT_MA 4u
 #define MAX_CURRENT_MA 100u
+#define PWM_MAX_VALUE      0x03FFu
+#define PWM_MIN_PERCENT    0u
+#define PWM_MAX_PERCENT    100u
 
 /******************************************************************
  *                             Globals
@@ -153,6 +156,10 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
         case CAN_MESSAGE_SET_CURRENT:
             MBI6353Q_SetCurrent(CAN_ConvertCurrentToGCG2(recvMsg.data[1]));
             break;
+        case CAN_MESSAGE_SET_PWM:
+            MBI6353Q_WriteAllBrightness(CAN_ConvertPWM(recvMsg.data[1]));
+            Send_OE_Vsync();
+            break;
         case CAN_MESSAGE_INCREASE_BRIGHTNESS_1:
             MBI6353Q_StepBrightness(1);
             break;
@@ -183,26 +190,6 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
         case CAN_MESSAGE_DECREASE_BRIGHTNESS_100:
             MBI6353Q_StepBrightness(-100);
             break;
-        case CAN_MESSAGE_PWM_LOW:
-     		MBI6353Q_WriteAllBrightness(0x0009); // 1/8 of 0x03FF
-     		Send_OE_Vsync();
-     		break;
-        case CAN_MESSAGE_PWM_88:
-		    MBI6353Q_WriteAllBrightness(0x0069); // 1/8 of 0x03FF
-		    Send_OE_Vsync();
-		    break;
-		case CAN_MESSAGE_PWM_105:
-		    MBI6353Q_WriteAllBrightness(0x0064); // 1/4 of 0x03FF
-		    Send_OE_Vsync();
-		    break;
-		case CAN_MESSAGE_PWM_148:
-		    MBI6353Q_WriteAllBrightness(0x0063); // 1/2 of 0x03FF
-		    Send_OE_Vsync();
-		    break;
-		case CAN_MESSAGE_PWM_288:
-		    MBI6353Q_WriteAllBrightness(0x006B); // 3/4 of 0x03FF
-			Send_OE_Vsync();
-			break;
 		case CAN_MESSAGE_MICRO_TEMP:
 		    TMP1075_Read_Temp_Micro();
 		    break;
@@ -252,28 +239,46 @@ uint8_t CAN_ConvertCurrentToGCG2(uint8_t current_mA)
         return 0u; /* current out of range */
     }
 
-    if (current_mA >= 25u)
-    {
-        gcg1 = 1.0f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_default);
-    }
-    else if (current_mA >= 13u)
-    {
-        gcg1 = 0.5f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_half);
-    }
-    else if (current_mA >= 7u)
-    {
-        gcg1 = 0.25f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_quarter);
-    }
-    else if (current_mA >= 4u)
+    if (current_mA <= 12u)
     {
         gcg1 = 0.125f;
         MBI6353Q_SetCurrentDivide(mbi6353q_eighth);
     }
+    else if (current_mA < 25u)
+    {
+        gcg1 = 0.25f;
+        MBI6353Q_SetCurrentDivide(mbi6353q_quarter);
+    }
+    else if (current_mA < 50u)
+    {
+        gcg1 = 0.5f;
+        MBI6353Q_SetCurrentDivide(mbi6353q_half);
+    }
+    else
+    {
+        gcg1 = 1.0f;
+        MBI6353Q_SetCurrentDivide(mbi6353q_default);
+    }
 
+    Send_OE_Vsync();
     gcg2 = ((((float)current_mA / gcg1) - 25.0f) * 255.0f) / 75.0f;
 
     return (uint8_t)(gcg2 + 0.5f); 
+}
+
+/******************************************************************
+ * Name: CAN_ConvertPWM
+ * Paramters: pwm (uint8_t) - wanted pwm value
+ * Returns: pwm value in hex 
+ * Description: Convert pwm value to hex
+ * Example: [node][SET_PWM][percent]
+ ******************************************************************/
+uint16_t CAN_ConvertPWM(uint8_t percent)
+{
+    if (percent > PWM_MAX_PERCENT)
+    {
+        percent = PWM_MAX_PERCENT;
+    }
+
+    return (uint16_t)(((uint32_t)percent * PWM_MAX_VALUE + 50u) / 100u);
 }

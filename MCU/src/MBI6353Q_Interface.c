@@ -442,13 +442,13 @@ void MBI6353Q_SetCurrentDivide(uint8_t currentDivide)
 
     MBI6353Q_Register_t setConfig1 = {
         .s_config1_reg = {
-            .THRESHOLD = mbi6353q_pam_mode,      //  1111
-            .DISPLAY_MODE = mbi6353q_continuous, //  0
-            .NUM_SCAN = mbi6353q_scan1,          //  00
-            .RESERVE_7 = 0x00,                   //  0
-            .NUM_SCRAMBLE = mbi6353q_scramble32, //  11
-            .CURRENT_DIVIDE = currentDivide,     //  Current divide value to set
-            .RESERVE_15_12 = 0x00,               //  0000
+            .THRESHOLD = mbi6353q_pam_mode,         //  1111
+            .DISPLAY_MODE = mbi6353q_continuous,    //  0
+            .NUM_SCAN = mbi6353q_scan1,             //  00
+            .RESERVE_7 = 0x0,                       //  0
+            .NUM_SCRAMBLE = mbi6353q_scramble32,    //  11
+            .CURRENT_DIVIDE = currentDivide,        //  Current divide value to set
+            .RESERVE_15_12 = 0x00,                   //  0000
         }};
 
     MBI6353Q_CreateSingleCmd(&write_register, sendSingleWrite);
@@ -562,13 +562,11 @@ void MBI6353Q_WriteAllBrightness(uint16_t brightness)
 
     MBI6353Q_WriteBrightness(&brightnessReg, brightnessBuffer);
 
-
-
     // Fill sendBrightnessCommand
     memcpy(sendBrightnessCommand, commandBuffer, BURST_CMD_SIZE);
     for (uint8_t i = BURST_CMD_SIZE; i < BRIGHTNESS_SIZE - 4; i += DATA_SIZE)
     {
-        memcpy(sendBrightnessCommand + i, brightness, DATA_SIZE);
+        memcpy(sendBrightnessCommand + i, brightnessBuffer, DATA_SIZE);
     }
 
     // Send brightness command

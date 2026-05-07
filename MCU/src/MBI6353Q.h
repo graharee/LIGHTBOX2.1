@@ -101,10 +101,10 @@ typedef enum
 
 typedef enum
 {
-    mbi6353q_eighth = 0x00u,
-    mbi6353q_half = 0x01u,
-    mbi6353q_quarter = 0x02u,
-    mbi6353q_default = 0x03u,
+    mbi6353q_eighth = 0x0u,
+    mbi6353q_quarter = 0x1u,
+    mbi6353q_half = 0x2u,
+    mbi6353q_default = 0x3u,
 } MBI6353Q_GCG1_DIVISION_t;
 
 typedef enum
@@ -461,7 +461,7 @@ typedef struct
     uint16_t RISING : 3;
     uint16_t RESERVE_7 : 1;
     uint16_t HLM_ENABLE : 1;
-    uint16_t SET_CURRENT : 8;
+    uint8_t SET_CURRENT : 8;
 } MBI6353Q_CONFIG5_REG_t;
 
 /*------------------------config 6-8 reg-------------------------*/

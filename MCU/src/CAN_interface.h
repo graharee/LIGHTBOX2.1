@@ -94,7 +94,8 @@
 #define CAN_MESSAGE_41_OFF (83UL) // 0x53
 #define CAN_MESSAGE_42_OFF (84UL) // 0x54
 
-#define CAN_MESSAGE_SET_CURRENT  (85UL)  // 0x55 testing this
+#define CAN_MESSAGE_SET_CURRENT  (85UL)  // 0x55 
+#define CAN_MESSAGE_SET_PWM      (86UL)  // 0x56 testing this
 
 #define CAN_MESSAGE_DIV_EIGHTH  (94UL)  // 0x5E
 #define CAN_MESSAGE_DIV_HALF    (95UL)  // 0x5F
@@ -113,11 +114,11 @@
 #define CAN_MESSAGE_DECREASE_BRIGHTNESS_50  (106UL) // 0x6A
 #define CAN_MESSAGE_DECREASE_BRIGHTNESS_100 (107UL) // 0x6B
 
-#define CAN_MESSAGE_PWM_88 (108UL)  // 0x6C
-#define CAN_MESSAGE_PWM_105 (109UL)  // 0x6D
-#define CAN_MESSAGE_PWM_148 (110UL)  // 0x6E
-#define CAN_MESSAGE_PWM_288 (111UL)  // 0x6F
-#define CAN_MESSAGE_PWM_LOW (112UL) // 0x70
+// #define CAN_MESSAGE_PWM_88 (108UL)  // 0x6C
+// #define CAN_MESSAGE_PWM_105 (109UL)  // 0x6D
+// #define CAN_MESSAGE_PWM_148 (110UL)  // 0x6E
+// #define CAN_MESSAGE_PWM_288 (111UL)  // 0x6F
+// #define CAN_MESSAGE_PWM_LOW (112UL) // 0x70
 
 #define CAN_MESSAGE_MICRO_TEMP (120UL) // 78
 #define CAN_MESSAGE_DRIVER_TEMP (121UL) //79
@@ -132,5 +133,6 @@ void CAN_InitInterface(uint32_t rx_msg_id);
 void CAN_ProcessReceivedMessage(uint32_t rx_msg_id);
 void CAN_SetLedBrightness(uint8_t led, uint16_t brightness);
 uint8_t CAN_ConvertCurrentToGCG2(uint8_t current_mA);
+uint16_t CAN_ConvertPWM(uint8_t percent);
 
 #endif // CAN_INTERFACE_H
