@@ -5,18 +5,58 @@
 #include <stdio.h>
 #include <string.h>
 
-void Delay(volatile int cycles) {
+void Delay(volatile int cycles) 
+{
     while(cycles--);
 }
 
-void Send_OE_Vsync() {
-    PINS_DRV_SetPins(VSYNC_PORT, 1 << VSYNC_PIN);
-    Delay(17);
-    PINS_DRV_ClearPins(OE_PORT, 1 << OE_PIN);
-    Delay(17);
-    PINS_DRV_ClearPins(VSYNC_PORT, 1 << VSYNC_PIN);
-    PINS_DRV_SetPins(OE_PORT, 1 << OE_PIN);
-    Delay(17);
+void Send_OE_Vsync(uint8_t deviceNumber) 
+{
+    switch (deviceNumber)
+    {
+        case 1: // Headlight
+            PINS_DRV_SetPins(VSYNC_PORT, 1u << VSYNC_PIN);
+            Delay(17);
+            PINS_DRV_ClearPins(OE_PORT, 1u << OE_PIN);
+            Delay(17);
+            PINS_DRV_ClearPins(VSYNC_PORT, 1u << VSYNC_PIN);
+            PINS_DRV_SetPins(OE_PORT, 1u << OE_PIN);
+            Delay(17);
+            break;
+
+        case 2: // 940nm
+            PINS_DRV_SetPins(PTD, 1u << 0);
+            Delay(17);
+            PINS_DRV_ClearPins(PTD, 1u << 5);
+            Delay(17);
+            PINS_DRV_ClearPins(PTD, 1u << 0);
+            PINS_DRV_SetPins(PTD, 1u << 5);
+            Delay(17);
+            break;
+
+        case 3: // 850nm
+            PINS_DRV_SetPins(PTD, 1u << 16);
+            Delay(17);
+            PINS_DRV_ClearPins(PTC, 1u << 1);
+            Delay(17);
+            PINS_DRV_ClearPins(PTD, 1u << 16);
+            PINS_DRV_SetPins(PTC, 1u << 1);
+            Delay(17);
+            break;
+
+        case 4: // Sunlight
+            PINS_DRV_SetPins(PTE, 1u << 9);
+            Delay(17);
+            PINS_DRV_ClearPins(PTC, 1u << 16);
+            Delay(17);
+            PINS_DRV_ClearPins(PTE, 1u << 9);
+            PINS_DRV_SetPins(PTC, 1u << 16);
+            Delay(17);
+            break;
+
+        default:
+            break;
+    }
 }
 
 uint32_t ReadDipSwitchState() {

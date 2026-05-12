@@ -99,9 +99,4 @@ void MBI6353Q_WriteBrightness(const MBI6353Q_Register_t* mbi6353q_data, uint8_t*
 }
 
 
-
-
-
 //memcpy(&u8p_buffer[4], &mbi6353q_cmd->u_regMap.s_config1_reg, sizeof(uint8_t)*2);
-
-

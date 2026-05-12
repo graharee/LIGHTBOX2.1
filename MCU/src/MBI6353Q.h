@@ -724,9 +724,8 @@ typedef enum
     mbi6353q_write_all = 0x00u,
     mbi6353q_device_1 = 0x01u,
     mbi6353q_device_2 = 0x02u,
-    /// ....
-    mbi6353q_device_62 = 0x3Eu,
-    mbi6353q_write_dif = 0x3Fu,
+    mbi6353q_device_3 = 0x03u,
+    mbi6353q_device_4 = 0x04u,
 } MBI6353Q_DEVICE_ADDRESS_t;
 
 typedef struct

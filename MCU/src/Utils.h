@@ -8,7 +8,7 @@
 #define UTILS_H
 
 void Delay(volatile int cycles);
-void Send_OE_Vsync(void);
+void Send_OE_Vsync(uint8_t deviceNumber);
 uint32_t ReadDipSwitchState();
 
 #endif // UTILS_H

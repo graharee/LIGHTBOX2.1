@@ -48,16 +48,11 @@ void MBI6353Q_SendInitMsgs(void);
 void MBI6353Q_ReadConfig(void);
 uint8_t MBI6353Q_ReadRegister(MBI6353Q_RegAddr_t reg_address);
 
-void MBI6353Q_WriteSingleBrightness(MBI6353Q_RegAddr_t reg_address, uint16_t brightness);
-void MBI6353Q_WriteAllBrightness(uint16_t brightness);
-void MBI6353Q_SetCurrent(uint16_t current);
-void MBI6353Q_SetCurrentDivide(uint8_t currentDivide);
+void MBI6353Q_WriteSingleBrightness(uint8_t deviceNumber, MBI6353Q_RegAddr_t reg_address, uint16_t brightness);
+void MBI6353Q_WriteAllBrightness(uint8_t deviceNumber, uint16_t brightness);
+void MBI6353Q_SetCurrent(uint8_t deviceNumber, uint16_t current);
+void MBI6353Q_SetCurrentDivide(uint8_t deviceNumber, uint8_t currentDivide);
 void MBI6353Q_StepBrightness(int16_t step);
-
-
-
-
-
 
 #endif
 /**********************************************************************

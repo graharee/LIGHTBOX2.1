@@ -118,7 +118,6 @@ typedef struct
 
 /*------------------------Control Messages -------------------------*/
 
-
 typedef struct 
 {
     uint8_t POINTER_REG    : 8;
@@ -137,9 +136,9 @@ typedef struct
     uint8_t POINTER_REG         : 8;
 }TMP1075_Read_Single_Cmd_t;
 
-void TMP1075_WriteWord(TMP1075_Write_Word_Cmd_t* tmp1075_write_word_cmd, uint8_t* u8p_buffer);
-void TMP1075_WriteSingle(TMP1075_Write_Single_Cmd_t* tmp1075_write_single_cmd, uint8_t* u8p_buffer);
-void TMP1075_Read_Pointer(TMP1075_Write_Single_Cmd_t* tmp1075_write_single_cmd, uint8_t* u8p_buffer);
+void TMP1075_WriteWord(const TMP1075_Write_Word_Cmd_t* tmp1075_write_word_cmd, uint8_t* u8p_buffer);
+void TMP1075_WriteSingle(const TMP1075_Write_Single_Cmd_t* tmp1075_write_single_cmd, uint8_t* u8p_buffer);
+void TMP1075_Read_Pointer(const TMP1075_Read_Single_Cmd_t* tmp1075_read_single_cmd, uint8_t* u8p_buffer);
 
 #endif
 

@@ -22,11 +22,14 @@
 #define LED_ON      0x03FFu
 #define LED_OFF     0x0000u
 #define NUM_LEDS    42u
-#define MIN_CURRENT_MA 4u
-#define MAX_CURRENT_MA 100u
+#define MIN_CURRENT_MA     4u
+#define MAX_CURRENT_MA     100u
 #define PWM_MAX_VALUE      0x03FFu
 #define PWM_MIN_PERCENT    0u
 #define PWM_MAX_PERCENT    100u
+#define DRIVER_NUM         0u
+#define COMMAND_INDEX      1u
+#define DATA_INDEX         2u
 
 /******************************************************************
  *                             Globals
@@ -125,80 +128,83 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
 
     first_can_msg++;
 
-    if (first_can_msg == 1)
+    if (first_can_msg == 1) // if first message set default divide
     {
-        MBI6353Q_SetCurrentDivide(mbi6353q_default);
+        MBI6353Q_SetCurrentDivide(1, mbi6353q_default);
+        MBI6353Q_SetCurrentDivide(2, mbi6353q_default);
+        MBI6353Q_SetCurrentDivide(3, mbi6353q_default);
+        MBI6353Q_SetCurrentDivide(4, mbi6353q_default);
     }
 
-    if ((recvMsg.data[0] >= CAN_MESSAGE_1_ON) && (recvMsg.data[0] <= CAN_MESSAGE_42_ON))
+    if ((recvMsg.data[COMMAND_INDEX] >= CAN_MESSAGE_1_ON) && (recvMsg.data[COMMAND_INDEX] <= CAN_MESSAGE_42_ON))
     {
-        uint8_t led = recvMsg.data[0];
-        CAN_SetLedBrightness(led, LED_ON);
+        uint8_t led = recvMsg.data[COMMAND_INDEX];
+        CAN_SetLedBrightness(recvMsg.data[DRIVER_NUM], led, LED_ON);
         return;
     }
-    else if ((recvMsg.data[0] >= CAN_MESSAGE_1_OFF) && (recvMsg.data[0] <= CAN_MESSAGE_42_OFF))
+    else if ((recvMsg.data[COMMAND_INDEX] >= CAN_MESSAGE_1_OFF) && (recvMsg.data[COMMAND_INDEX] <= CAN_MESSAGE_42_OFF))
     {
-        uint8_t led = recvMsg.data[0] - CAN_MESSAGE_1_OFF + 1u;
-        CAN_SetLedBrightness(led, LED_OFF);
+        uint8_t led = recvMsg.data[COMMAND_INDEX] - CAN_MESSAGE_1_OFF + 1u;
+        CAN_SetLedBrightness(recvMsg.data[DRIVER_NUM], led, LED_OFF);
         return;
     }
 
-    switch (recvMsg.data[0]) 
+    switch (recvMsg.data[COMMAND_INDEX]) 
     {
         case CAN_MESSAGE_ALL_OFF:
-            MBI6353Q_WriteAllBrightness(LED_OFF);
-            Send_OE_Vsync();
+            MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], LED_OFF);
+            Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
             break;
         case CAN_MESSAGE_ALL_ON:
-            MBI6353Q_WriteAllBrightness(LED_ON);
-            Send_OE_Vsync();
+            MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], LED_ON);
+            Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
             break;
         case CAN_MESSAGE_SET_CURRENT:
-            MBI6353Q_SetCurrent(CAN_ConvertCurrentToGCG2(recvMsg.data[1]));
+            MBI6353Q_SetCurrent(recvMsg.data[DRIVER_NUM], CAN_ConvertCurrentToGCG2(recvMsg.data[DRIVER_NUM], recvMsg.data[DATA_INDEX]));
             break;
         case CAN_MESSAGE_SET_PWM:
-            MBI6353Q_WriteAllBrightness(CAN_ConvertPWM(recvMsg.data[1]));
-            Send_OE_Vsync();
+            MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], CAN_ConvertPWM(recvMsg.data[DATA_INDEX]));
+            Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
             break;
-        case CAN_MESSAGE_INCREASE_BRIGHTNESS_1:
-            MBI6353Q_StepBrightness(1);
-            break;
-        case CAN_MESSAGE_INCREASE_BRIGHTNESS_5:
-            MBI6353Q_StepBrightness(5);
-            break;
-        case CAN_MESSAGE_INCREASE_BRIGHTNESS_10:
-            MBI6353Q_StepBrightness(10);
-            break;
-        case CAN_MESSAGE_INCREASE_BRIGHTNESS_50:
-            MBI6353Q_StepBrightness(50);
-            break;
-        case CAN_MESSAGE_INCREASE_BRIGHTNESS_100:
-            MBI6353Q_StepBrightness(100);
-            break;
-        case CAN_MESSAGE_DECREASE_BRIGHTNESS_1:
-            MBI6353Q_StepBrightness(-1);
-            break;
-        case CAN_MESSAGE_DECREASE_BRIGHTNESS_5:
-            MBI6353Q_StepBrightness(-5);
-            break;
-        case CAN_MESSAGE_DECREASE_BRIGHTNESS_10:
-            MBI6353Q_StepBrightness(-10);
-            break;
-        case CAN_MESSAGE_DECREASE_BRIGHTNESS_50:
-            MBI6353Q_StepBrightness(-50);
-            break;
-        case CAN_MESSAGE_DECREASE_BRIGHTNESS_100:
-            MBI6353Q_StepBrightness(-100);
-            break;
-		case CAN_MESSAGE_MICRO_TEMP:
+        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_1:
+        //     MBI6353Q_StepBrightness(1);
+        //     break;
+        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_5:
+        //     MBI6353Q_StepBrightness(5);
+        //     break;
+        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_10:
+        //     MBI6353Q_StepBrightness(10);
+        //     break;
+        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_50:
+        //     MBI6353Q_StepBrightness(50);
+        //     break;
+        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_100:
+        //     MBI6353Q_StepBrightness(100);
+        //     break;
+        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_1:
+        //     MBI6353Q_StepBrightness(-1);
+        //     break;
+        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_5:
+        //     MBI6353Q_StepBrightness(-5);
+        //     break;
+        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_10:
+        //     MBI6353Q_StepBrightness(-10);
+        //     break;
+        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_50:
+        //     MBI6353Q_StepBrightness(-50);
+        //     break;
+        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_100:
+        //     MBI6353Q_StepBrightness(-100);
+        //     break;
+		case CAN_MESSAGE_AVG_TEMP:
 		    TMP1075_Read_Temp_Micro();
 		    break;
-		case CAN_MESSAGE_DRIVER_TEMP:
-		    TMP1075_Read_Temp_Driver();
-		    break;
-		case CAN_MESSAGE_BACK_TEMP:
-		    TMP1075_Read_Temp_Back();
-		    break;
+		// case CAN_MESSAGE_DRIVER_TEMP:
+		//     TMP1075_Read_Temp_Driver();
+		//     break;
+		// case CAN_MESSAGE_BACK_TEMP:
+		//     TMP1075_Read_Temp_Back();
+		//     break;
         default:
             break;
     }
@@ -211,16 +217,16 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
  * Returns: NONE
  * Description: Set LED brightness 
  ******************************************************************/
-void CAN_SetLedBrightness(uint8_t led, uint16_t brightness)
+void CAN_SetLedBrightness(uint8_t deviceNumber, uint8_t led, uint16_t brightness)
 {
     if (led < 1 || led > NUM_LEDS)
     {
         return; /* out of range error */
     }
 
-    MBI6353Q_WriteSingleBrightness(ledRegs[led - 1], brightness);
+    MBI6353Q_WriteSingleBrightness(deviceNumber, ledRegs[led - 1], brightness);
 
-    Send_OE_Vsync();
+    Send_OE_Vsync(deviceNumber);
 }
 
 /******************************************************************
@@ -230,7 +236,7 @@ void CAN_SetLedBrightness(uint8_t led, uint16_t brightness)
  * Description: Convert mA to hex for the GCG2 register
  * NOTE: equation found on page 15 of the MBI6353 datasheet
  ******************************************************************/
-uint8_t CAN_ConvertCurrentToGCG2(uint8_t current_mA)
+uint8_t CAN_ConvertCurrentToGCG2(uint8_t deviceNumber, uint8_t current_mA)
 {
     float gcg1, gcg2;
 
@@ -242,25 +248,25 @@ uint8_t CAN_ConvertCurrentToGCG2(uint8_t current_mA)
     if (current_mA <= 12u)
     {
         gcg1 = 0.125f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_eighth);
+        MBI6353Q_SetCurrentDivide(deviceNumber, mbi6353q_eighth);
     }
     else if (current_mA < 25u)
     {
         gcg1 = 0.25f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_quarter);
+        MBI6353Q_SetCurrentDivide(deviceNumber, mbi6353q_quarter);
     }
     else if (current_mA < 50u)
     {
         gcg1 = 0.5f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_half);
+        MBI6353Q_SetCurrentDivide(deviceNumber, mbi6353q_half);
     }
     else
     {
         gcg1 = 1.0f;
-        MBI6353Q_SetCurrentDivide(mbi6353q_default);
+        MBI6353Q_SetCurrentDivide(deviceNumber, mbi6353q_default);
     }
 
-    Send_OE_Vsync();
+    Send_OE_Vsync(deviceNumber);
     gcg2 = ((((float)current_mA / gcg1) - 25.0f) * 255.0f) / 75.0f;
 
     return (uint8_t)(gcg2 + 0.5f); 

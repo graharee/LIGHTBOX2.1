@@ -10,9 +10,6 @@
 #include "TMP1075.h"
 #include "TMP1075_Interface.h"
 
-
-
-
 int main(void) {
 	lpi2c_master_state_t lpi2c1MasterState;
     CLOCK_SYS_Init(g_clockManConfigsArr, CLOCK_MANAGER_CONFIG_CNT, g_clockManCallbacksArr, CLOCK_MANAGER_CALLBACK_CNT);
@@ -29,9 +26,15 @@ int main(void) {
 
     // Initialize LED driver and Turn lights off at power-on
     MBI6353Q_SendInitMsgs();
-    MBI6353Q_WriteAllBrightness(0x0);
-    Send_OE_Vsync();
 
+    MBI6353Q_WriteAllBrightness(1u, 0x0);
+    Send_OE_Vsync(1);
+    MBI6353Q_WriteAllBrightness(2u, 0x0);
+    Send_OE_Vsync(2);
+    MBI6353Q_WriteAllBrightness(3u, 0x0);
+    Send_OE_Vsync(3);
+    MBI6353Q_WriteAllBrightness(4u, 0x0);
+    Send_OE_Vsync(4);
 
     while(1) {
         CAN_ProcessReceivedMessage(rx_msg_id);
