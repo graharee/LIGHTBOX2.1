@@ -10,6 +10,7 @@
  *                            Includes
  ******************************************************************/
 #include "TMP1075.h"
+#include "Utils.h"
 #include "TMP1075_Interface.h"
 #include "sdk_project_config.h"
 
