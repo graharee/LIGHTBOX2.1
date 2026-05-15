@@ -5,16 +5,17 @@
 #include <stdio.h>
 #include <string.h>
 
-void Delay(volatile int cycles) 
-{
+#define FTM_DUTY_MAX 0x8000U
+
+void Delay(volatile int cycles) {
     while(cycles--);
 }
 
-void Send_OE_Vsync(uint8_t deviceNumber) 
+void Send_OE_Vsync(uint8_t deviceNumber)
 {
     switch (deviceNumber)
     {
-        case 1: // Headlight
+        case 1:
             PINS_DRV_SetPins(VSYNC_PORT, 1u << VSYNC_PIN);
             Delay(17);
             PINS_DRV_ClearPins(OE_PORT, 1u << OE_PIN);
@@ -24,7 +25,7 @@ void Send_OE_Vsync(uint8_t deviceNumber)
             Delay(17);
             break;
 
-        case 2: // 940nm
+        case 2:
             PINS_DRV_SetPins(PTD, 1u << 0);
             Delay(17);
             PINS_DRV_ClearPins(PTD, 1u << 5);
@@ -34,7 +35,7 @@ void Send_OE_Vsync(uint8_t deviceNumber)
             Delay(17);
             break;
 
-        case 3: // 850nm
+        case 3:
             PINS_DRV_SetPins(PTD, 1u << 16);
             Delay(17);
             PINS_DRV_ClearPins(PTC, 1u << 1);
@@ -44,7 +45,7 @@ void Send_OE_Vsync(uint8_t deviceNumber)
             Delay(17);
             break;
 
-        case 4: // Sunlight
+        case 4:
             PINS_DRV_SetPins(PTE, 1u << 9);
             Delay(17);
             PINS_DRV_ClearPins(PTC, 1u << 16);
@@ -91,3 +92,21 @@ uint32_t ReadDipSwitchState() {
     return state;
 }
 
+void Fan_SetPWM(uint8_t percent)
+{
+    if (percent > 100U)
+    {
+        percent = 100U;
+    }
+
+    uint16_t duty = (uint16_t)(((uint32_t)percent * FTM_DUTY_MAX) / 100U);
+
+    FTM_DRV_UpdatePwmChannel(
+        INST_FLEXTIMER_PWM_1,
+        0U,
+        FTM_PWM_UPDATE_IN_DUTY_CYCLE,
+        duty,
+        0U,
+        true
+    );
+}

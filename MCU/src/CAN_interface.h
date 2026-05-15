@@ -118,7 +118,7 @@
 // #define CAN_MESSAGE_DRIVER_TEMP (121UL) //79
 // #define CAN_MESSAGE_BACK_TEMP (122UL)  //7A
 
-#define TX_MAILBOX  (1UL)
+#define TX_MAILBOX  (2UL)
 #define TX_MSG_ID   (1UL)
 #define RX_MAILBOX  (0UL)
 #define RX_MSG_ID   (2UL)
@@ -128,5 +128,6 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id);
 void CAN_SetLedBrightness(uint8_t deviceNumber, uint8_t led, uint16_t brightness);
 uint8_t CAN_ConvertCurrentToGCG2(uint8_t deviceNumber, uint8_t current_mA);
 uint16_t CAN_ConvertPWM(uint8_t percent);
+void CAN_Send_Avg_Temp(void);
 
 #endif // CAN_INTERFACE_H

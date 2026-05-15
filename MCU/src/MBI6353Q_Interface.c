@@ -113,7 +113,7 @@ static const MBI6353Q_Burst_Cmd_t read_config = {
 // Eval default [0F0F]
 static const MBI6353Q_Register_t config1 = {
     .s_config1_reg = {
-        .THRESHOLD = mbi6353q_pam_mode,      //  1111
+        .THRESHOLD = mbi6353q_pwm_only,      //  1111
         .DISPLAY_MODE = mbi6353q_continuous, //  0
         .NUM_SCAN = mbi6353q_scan1,          //  00
         .RESERVE_7 = 0x00,                   //  0
@@ -447,7 +447,7 @@ void MBI6353Q_SetCurrentDivide(uint8_t deviceNumber, uint8_t currentDivide)
 
     MBI6353Q_Register_t setConfig1 = {
         .s_config1_reg = {
-            .THRESHOLD = mbi6353q_pam_mode,         //  1111
+            .THRESHOLD = mbi6353q_pwm_only,         //  1111
             .DISPLAY_MODE = mbi6353q_continuous,    //  0
             .NUM_SCAN = mbi6353q_scan1,             //  00
             .RESERVE_7 = 0x0,                       //  0
@@ -562,6 +562,9 @@ void MBI6353Q_SendInitMsgs(void)
             TIMEOUT);
 
         MBI6353Q_DeselectDriver(deviceNumber);
+
+        MBI6353Q_WriteAllBrightness(deviceNumber, 0x0); // Start all LEDs off
+        Send_OE_Vsync(deviceNumber);
     }
 }
 

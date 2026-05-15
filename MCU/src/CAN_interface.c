@@ -19,12 +19,12 @@
 /******************************************************************
  *                             Defines
  ******************************************************************/
-#define LED_ON      0x03FFu
+#define LED_ON      0x0FFFu
 #define LED_OFF     0x0000u
 #define NUM_LEDS    42u
 #define MIN_CURRENT_MA     4u
 #define MAX_CURRENT_MA     100u
-#define PWM_MAX_VALUE      0x03FFu
+#define PWM_MAX_VALUE      0x0FFFu
 #define PWM_MIN_PERCENT    0u
 #define PWM_MAX_PERCENT    100u
 #define DRIVER_NUM         0u
@@ -95,7 +95,7 @@ void CAN_InitInterface(uint32_t rx_msg_id)
 {
     CAN_Init(&can_pal1_instance, &can_pal1_Config0);
 
-    can_buff_config_t buffCfg =  
+    can_buff_config_t buffCfg =
     {
         .enableFD = false,
         .enableBRS = true,
@@ -104,7 +104,27 @@ void CAN_InitInterface(uint32_t rx_msg_id)
         .isRemote = false
     };
 
-    CAN_ConfigRxBuff(&can_pal1_instance, RX_MAILBOX, &buffCfg, rx_msg_id);
+    can_buff_config_t txBuffCfg =
+    {
+        .enableFD = false,
+        .enableBRS = false,
+        .fdPadding = 0U,
+        .idType = CAN_MSG_ID_STD,
+        .isRemote = false
+    };
+
+    CAN_ConfigRxBuff(
+        &can_pal1_instance,
+        RX_MAILBOX,
+        &buffCfg,
+        rx_msg_id
+    );
+
+    CAN_ConfigTxBuff(
+        &can_pal1_instance,
+        TX_MAILBOX,
+        &txBuffCfg
+    );
 }
 
 /******************************************************************
@@ -166,44 +186,8 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
             MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], CAN_ConvertPWM(recvMsg.data[DATA_INDEX]));
             Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
             break;
-        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_1:
-        //     MBI6353Q_StepBrightness(1);
-        //     break;
-        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_5:
-        //     MBI6353Q_StepBrightness(5);
-        //     break;
-        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_10:
-        //     MBI6353Q_StepBrightness(10);
-        //     break;
-        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_50:
-        //     MBI6353Q_StepBrightness(50);
-        //     break;
-        // case CAN_MESSAGE_INCREASE_BRIGHTNESS_100:
-        //     MBI6353Q_StepBrightness(100);
-        //     break;
-        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_1:
-        //     MBI6353Q_StepBrightness(-1);
-        //     break;
-        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_5:
-        //     MBI6353Q_StepBrightness(-5);
-        //     break;
-        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_10:
-        //     MBI6353Q_StepBrightness(-10);
-        //     break;
-        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_50:
-        //     MBI6353Q_StepBrightness(-50);
-        //     break;
-        // case CAN_MESSAGE_DECREASE_BRIGHTNESS_100:
-        //     MBI6353Q_StepBrightness(-100);
-        //     break;
-		case CAN_MESSAGE_AVG_TEMP:
-		    TMP1075_Read_Temp_Micro();
-		    break;
-		// case CAN_MESSAGE_DRIVER_TEMP:
-		//     TMP1075_Read_Temp_Driver();
-		//     break;
-		// case CAN_MESSAGE_BACK_TEMP:
-		//     TMP1075_Read_Temp_Back();
+		// case CAN_MESSAGE_AVG_TEMP: //add later if we dont want the gui to continuously be updated?
+        //     CAN_Send_Avg_Temp();
 		//     break;
         default:
             break;
@@ -287,4 +271,42 @@ uint16_t CAN_ConvertPWM(uint8_t percent)
     }
 
     return (uint16_t)(((uint32_t)percent * PWM_MAX_VALUE + 50u) / 100u);
+}
+
+/******************************************************************
+ * Name: CAN_Send_Avg_Temp
+ * Paramters: None
+ * Returns: None
+ * Description: Scales Temp value to hex to report via CAN
+ ******************************************************************/
+void CAN_Send_Avg_Temp(void)
+{
+    can_message_t sendMsg = {0};
+    float averageTempCelsius;
+    uint16_t tempScaled;
+
+    averageTempCelsius = TMP1075_Read_Avg_Temp();
+
+    tempScaled = (uint16_t)(averageTempCelsius * 100.0f);
+
+    sendMsg.id = TX_MSG_ID;
+    sendMsg.length = 2u;
+
+    sendMsg.data[0] = (uint8_t)((tempScaled >> 8) & 0xFF);
+    sendMsg.data[1] = (uint8_t)(tempScaled & 0xFF);
+
+    CAN_Send(&can_pal1_instance, TX_MAILBOX, &sendMsg);
+}
+
+/******************************************************************
+ * Name: CAN_ReportFaults
+ * Paramters: None
+ * Returns: None
+ * Description: Reports faults to user if neccessary, every time a
+ *  message is sent
+ ******************************************************************/
+void CAN_ReportFaults(void)
+{
+    CAN_Send_Avg_Temp(); // over temp fault / reporting temperature
+    // add others hear
 }
