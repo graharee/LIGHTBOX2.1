@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "Utils.h"
 #include "MBI6353Q.h"
 #include "MBI6353Q_Interface.h"
 #include "sdk_project_config.h"
@@ -564,6 +565,7 @@ void MBI6353Q_SendInitMsgs(void)
         MBI6353Q_DeselectDriver(deviceNumber);
 
         MBI6353Q_WriteAllBrightness(deviceNumber, 0x0); // Start all LEDs off
+        MBI6353Q_SetCurrentDivide(deviceNumber, mbi6353q_default);
         Send_OE_Vsync(deviceNumber);
     }
 }

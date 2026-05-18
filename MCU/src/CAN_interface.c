@@ -21,20 +21,25 @@
  ******************************************************************/
 #define LED_ON      0x0FFFu
 #define LED_OFF     0x0000u
-#define NUM_LEDS    42u
+#define WRITE_ALL   0x00u
+
+#define DRIVER_NUM         0u
+#define COMMAND_INDEX      1u
+#define DATA_INDEX         2u
+
+#define NUM_LEDS_HEADLIGHT   42u
+#define NUM_LEDS_SUNLIGHT    48u
+
 #define MIN_CURRENT_MA     4u
 #define MAX_CURRENT_MA     100u
 #define PWM_MAX_VALUE      0x0FFFu
 #define PWM_MIN_PERCENT    0u
 #define PWM_MAX_PERCENT    100u
-#define DRIVER_NUM         0u
-#define COMMAND_INDEX      1u
-#define DATA_INDEX         2u
 
 /******************************************************************
  *                             Globals
  ******************************************************************/
-static const uint8_t ledRegs[NUM_LEDS] =
+static const uint8_t headlightLedRegs[NUM_LEDS_HEADLIGHT] =
 {
     mbi6353q_bright_reg29, // LED 1
     mbi6353q_bright_reg34, // LED 2
@@ -80,7 +85,57 @@ static const uint8_t ledRegs[NUM_LEDS] =
     mbi6353q_bright_reg02  // LED 42
 };
 
-static uint8_t first_can_msg = 0u;
+static const uint8_t sunlightLedRegs[NUM_LEDS_SUNLIGHT] =
+{
+    mbi6353q_bright_reg01, // LED 1 
+    mbi6353q_bright_reg02, // LED 2
+    mbi6353q_bright_reg03, // LED 3
+    mbi6353q_bright_reg04, // LED 4
+    mbi6353q_bright_reg05, // LED 5
+    mbi6353q_bright_reg48, // LED 6 
+    mbi6353q_bright_reg30, // LED 7 
+    mbi6353q_bright_reg06, // LED 8 
+    mbi6353q_bright_reg07, // LED 9
+    mbi6353q_bright_reg08, // LED 10
+    mbi6353q_bright_reg16, // LED 11 
+    mbi6353q_bright_reg47, // LED 12 
+    mbi6353q_bright_reg10, // LED 13 
+    mbi6353q_bright_reg11, // LED 14 
+    mbi6353q_bright_reg09, // LED 15
+    mbi6353q_bright_reg46, // LED 16 
+    mbi6353q_bright_reg38, // LED 17 
+    mbi6353q_bright_reg18, // LED 18 
+    mbi6353q_bright_reg14, // LED 19 
+    mbi6353q_bright_reg13, // LED 20
+    mbi6353q_bright_reg12, // LED 21
+    mbi6353q_bright_reg45, // LED 22 
+    mbi6353q_bright_reg39, // LED 23
+    mbi6353q_bright_reg24, // LED 24
+    mbi6353q_bright_reg19, // LED 25 
+    mbi6353q_bright_reg17, // LED 26 
+    mbi6353q_bright_reg15, // LED 27 
+    mbi6353q_bright_reg44, // LED 28 
+    mbi6353q_bright_reg37, // LED 29
+    mbi6353q_bright_reg33, // LED 30
+    mbi6353q_bright_reg23, // LED 31 
+    mbi6353q_bright_reg21, // LED 32 
+    mbi6353q_bright_reg20, // LED 33 
+    mbi6353q_bright_reg43, // LED 34 
+    mbi6353q_bright_reg34, // LED 35
+    mbi6353q_bright_reg28, // LED 36
+    mbi6353q_bright_reg22, // LED 37 
+    mbi6353q_bright_reg42, // LED 38 
+    mbi6353q_bright_reg39, // LED 39 
+    mbi6353q_bright_reg35, // LED 40 
+    mbi6353q_bright_reg31, // LED 41
+    mbi6353q_bright_reg27, // LED 42 
+    mbi6353q_bright_reg25, // LED 43 
+    mbi6353q_bright_reg41, // LED 44 
+    mbi6353q_bright_reg36, // LED 45
+    mbi6353q_bright_reg32, // LED 46
+    mbi6353q_bright_reg29, // LED 47
+    mbi6353q_bright_reg26, // LED 48 
+};
 
 /******************************************************************
  *                          Code Space
@@ -113,18 +168,8 @@ void CAN_InitInterface(uint32_t rx_msg_id)
         .isRemote = false
     };
 
-    CAN_ConfigRxBuff(
-        &can_pal1_instance,
-        RX_MAILBOX,
-        &buffCfg,
-        rx_msg_id
-    );
-
-    CAN_ConfigTxBuff(
-        &can_pal1_instance,
-        TX_MAILBOX,
-        &txBuffCfg
-    );
+    CAN_ConfigRxBuff(&can_pal1_instance, RX_MAILBOX, &buffCfg, rx_msg_id);
+    CAN_ConfigTxBuff(&can_pal1_instance, TX_MAILBOX, &txBuffCfg);
 }
 
 /******************************************************************
@@ -136,6 +181,7 @@ void CAN_InitInterface(uint32_t rx_msg_id)
 void CAN_ProcessReceivedMessage(uint32_t rx_msg_id) 
 {
     can_message_t recvMsg;
+    uint8_t driver, command, data;
 
     CAN_Receive(&can_pal1_instance, RX_MAILBOX, &recvMsg);
     while(CAN_GetTransferStatus(&can_pal1_instance, RX_MAILBOX) == STATUS_BUSY);
@@ -146,45 +192,73 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
         return;
     }
 
-    first_can_msg++;
-
-    if (first_can_msg == 1) // if first message set default divide
+    if ((recvMsg.data[DRIVER_NUM] > 0) && (recvMsg.data[DRIVER_NUM] <= 4))
     {
-        MBI6353Q_SetCurrentDivide(1, mbi6353q_default);
-        MBI6353Q_SetCurrentDivide(2, mbi6353q_default);
-        MBI6353Q_SetCurrentDivide(3, mbi6353q_default);
-        MBI6353Q_SetCurrentDivide(4, mbi6353q_default);
+        driver = recvMsg.data[DRIVER_NUM];
+        command = recvMsg.data[COMMAND_INDEX];
+        data = recvMsg.data[DATA_INDEX];
+
+        if (command == WRITE_ALL)
+        {
+            command = recvMsg.data[COMMAND_INDEX + 1u];
+            data = recvMsg.data[DATA_INDEX + 1u];
+
+            CAN_WriteAllLeds(driver, command, data);
+        }
+    }
+    else
+    {
+        return; // invalid driver number
     }
 
-    if ((recvMsg.data[COMMAND_INDEX] >= CAN_MESSAGE_1_ON) && (recvMsg.data[COMMAND_INDEX] <= CAN_MESSAGE_42_ON))
+    // writing to single LEDs [DRIVER NUMBER][LED #][PWM VALUE]
+    uint8_t max_leds = 0u;
+    uint8_t leds_off = 0u;
+
+    if (driver == SUNLIGHT_DRIVER)
     {
-        uint8_t led = recvMsg.data[COMMAND_INDEX];
-        CAN_SetLedBrightness(recvMsg.data[DRIVER_NUM], led, LED_ON);
+        max_leds = NUM_LEDS_SUNLIGHT;
+        leds_off = NUM_LEDS_SUNLIGHT + 1u;
+    }
+    else
+    {
+        max_leds = NUM_LEDS_HEADLIGHT;
+        leds_off = NUM_LEDS_HEADLIGHT + 1u;
+    }
+    
+    if ((command >= CAN_MESSAGE_LED_1_ON) && (command <= max_leds))
+    {
+        uint8_t led = command;
+        CAN_SetLedBrightness(driver, led, data);
         return;
     }
-    else if ((recvMsg.data[COMMAND_INDEX] >= CAN_MESSAGE_1_OFF) && (recvMsg.data[COMMAND_INDEX] <= CAN_MESSAGE_42_OFF))
+    if ((command >= leds_off) && (command < (leds_off + max_leds)))
     {
-        uint8_t led = recvMsg.data[COMMAND_INDEX] - CAN_MESSAGE_1_OFF + 1u;
-        CAN_SetLedBrightness(recvMsg.data[DRIVER_NUM], led, LED_OFF);
+        uint8_t led = command - leds_off + 1u;
+        CAN_SetLedBrightness(driver, led, LED_OFF);
         return;
     }
 
-    switch (recvMsg.data[COMMAND_INDEX]) 
+}
+
+void CAN_WriteAllLeds(uint8_t driver, uint8_t command, uint8_t data)
+{
+    switch (command) 
     {
         case CAN_MESSAGE_ALL_OFF:
-            MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], LED_OFF);
-            Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
+            MBI6353Q_WriteAllBrightness(driver, LED_OFF);
+            Send_OE_Vsync(driver);
             break;
         case CAN_MESSAGE_ALL_ON:
-            MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], LED_ON);
-            Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
+            MBI6353Q_WriteAllBrightness(driver, LED_ON);
+            Send_OE_Vsync(driver);
             break;
         case CAN_MESSAGE_SET_CURRENT:
-            MBI6353Q_SetCurrent(recvMsg.data[DRIVER_NUM], CAN_ConvertCurrentToGCG2(recvMsg.data[DRIVER_NUM], recvMsg.data[DATA_INDEX]));
+            MBI6353Q_SetCurrent(driver, CAN_ConvertCurrentToGCG2(driver, data));
             break;
         case CAN_MESSAGE_SET_PWM:
-            MBI6353Q_WriteAllBrightness(recvMsg.data[DRIVER_NUM], CAN_ConvertPWM(recvMsg.data[DATA_INDEX]));
-            Send_OE_Vsync(recvMsg.data[DRIVER_NUM]);
+            MBI6353Q_WriteAllBrightness(driver, CAN_ConvertPWM(data));
+            Send_OE_Vsync(driver);
             break;
 		// case CAN_MESSAGE_AVG_TEMP: //add later if we dont want the gui to continuously be updated?
         //     CAN_Send_Avg_Temp();
@@ -193,7 +267,6 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
             break;
     }
 }
-
 /******************************************************************
  * Name: CAN_SetLedBrightness
  * Paramters: led (uint8_t) - LED ID
@@ -202,13 +275,25 @@ void CAN_ProcessReceivedMessage(uint32_t rx_msg_id)
  * Description: Set LED brightness 
  ******************************************************************/
 void CAN_SetLedBrightness(uint8_t deviceNumber, uint8_t led, uint16_t brightness)
-{
-    if (led < 1 || led > NUM_LEDS)
+{   
+    if (deviceNumber == 4u) // there are 48 sunlight leds :/
     {
-        return; /* out of range error */
-    }
+        if (led < 1 || led > NUM_LEDS_SUNLIGHT)
+        {
+            return; /* out of range error */
+        }
 
-    MBI6353Q_WriteSingleBrightness(deviceNumber, ledRegs[led - 1], brightness);
+        MBI6353Q_WriteSingleBrightness(deviceNumber, sunlightLedRegs[led - 1], brightness);
+    }
+    else // there are 42 rest of leds :/
+    {
+        if (led < 1 || led > NUM_LEDS_HEADLIGHT)
+        {
+            return; /* out of range error */
+        }
+
+        MBI6353Q_WriteSingleBrightness(deviceNumber, headlightLedRegs[led - 1], brightness);
+    }
 
     Send_OE_Vsync(deviceNumber);
 }

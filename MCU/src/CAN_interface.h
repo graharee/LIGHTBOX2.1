@@ -8,11 +8,14 @@
 #define CAN_MESSAGE_ALL_ON  (255UL) // 0xFF
 #define CAN_MESSAGE_ALL_OFF (0UL)   // 0x00
 
+#define HEADLIGHT_DRIVER   (0x01u)
+#define SUNLIGHT_DRIVER    (0x04u)
+
+#define CAN_MESSAGE_LED_1_ON   (1u)
+#define CAN_MESSAGE_LED_1_OFF  (49u)
+
 #define CAN_MESSAGE_1_ON  (1UL)  // 0x01
 #define CAN_MESSAGE_42_ON (42UL) // 0x2A
-
-#define CAN_MESSAGE_1_OFF  (43UL) // 0x2B
-#define CAN_MESSAGE_42_OFF (84UL) // 0x54
 
 #define CAN_MESSAGE_SET_CURRENT  (85UL)  // 0x55 
 #define CAN_MESSAGE_SET_PWM      (86UL)  // 0x56 
@@ -30,5 +33,6 @@ uint8_t CAN_ConvertCurrentToGCG2(uint8_t deviceNumber, uint8_t current_mA);
 uint16_t CAN_ConvertPWM(uint8_t percent);
 void CAN_Send_Avg_Temp(void);
 void CAN_ReportFaults(void);
+void CAN_WriteAllLeds(uint8_t driver, uint8_t command, uint8_t data);
 
 #endif // CAN_INTERFACE_H

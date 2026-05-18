@@ -176,6 +176,11 @@ float TMP1075_Read_Avg_Temp(void)
         fanPwm = 20u;
         overTempFlag = 1u;
     }
+    else if ((avgTemp >= 22.0f) && (overTempFlag))
+    {
+        fanPwm = 20u;
+        overTempFlag = 1u;
+    }
     else
     {
         fanPwm = 0u;
