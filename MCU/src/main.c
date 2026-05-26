@@ -10,10 +10,15 @@
 #include "TMP1075.h"
 #include "TMP1075_Interface.h"
 
-int main(void) {
+#define TEMP_READ_PERIOD_MS   (500u)   // read temp every 500 ms
+static void Temperature_Task(void);
+
+int main(void) 
+{
 	lpi2c_master_state_t lpi2c1MasterState;
 	ftm_state_t ftmStateStruct;
     uint32_t rx_msg_id;
+    uint32_t last_temp_read_ms = 0u;
 
     CLOCK_SYS_Init(g_clockManConfigsArr, CLOCK_MANAGER_CONFIG_CNT, g_clockManCallbacksArr, CLOCK_MANAGER_CALLBACK_CNT);
     CLOCK_SYS_UpdateConfiguration(0U, CLOCK_MANAGER_POLICY_AGREEMENT);
@@ -32,14 +37,29 @@ int main(void) {
     rx_msg_id = ReadDipSwitchState();
     CAN_InitInterface(rx_msg_id);
     MBI6353Q_SendInitMsgs(); // Initialize LED driver 
-
+    
     while(1) 
     {
         CAN_ProcessReceivedMessage(rx_msg_id);
+
+        Temperature_Task(); //fix me
+
         CAN_ReportFaults();
     }
 
     return 0;
 }
 
+static void Temperature_Task(void)
+{
+    static uint32_t last_temp_read_ms = 0u;
+    uint32_t current_time_ms = OSIF_GetMilliseconds();
+
+    if ((current_time_ms - last_temp_read_ms) >= TEMP_READ_PERIOD_MS)
+    {
+        last_temp_read_ms = current_time_ms;
+
+        (void)TMP1075_Read_Avg_Temp();
+    }
+}
 

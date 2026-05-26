@@ -3,23 +3,32 @@
     Desciption: This is the file that opens and runs the Lightbox 2.1 application
 
     By: Reegan Graham
+
+    Responsibilities:
+    1. Create the QApplication
+    2. Initialize the PCAN interface object
+    3. Open the GUI
+    4. Start the Qt event loop
 '''
-from lightbox_gui import LightboxGUI
-from lightbox_controller import LightboxController
-from pcan_interface import PCANInterface
+import sys
 
-def main():
-    gui = LightboxGUI()
-    can = PCANInterface()
-    controller = LightboxController(gui, can)
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QApplication
 
-    # give GUI access to controller
-    gui.controller = controller
+from can_interface.pcan_interface import PcanInterface
+from gui.main_window import LightboxWindow
 
-    # initialize CAN on startup
-    controller.initialize_can()
+def main() -> None:
+    app = QApplication(sys.argv)
+    app.setFont(QFont("Segoe UI", 10))
 
-    gui.mainloop()
+    pcan = PcanInterface()
+
+    window = LightboxWindow(pcan)
+    window.show()
+
+    sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()
