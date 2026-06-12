@@ -10,7 +10,6 @@ Important architecture:
     - PCB address is the CAN ID.
     - LED address 0x00 means "all LEDs".
 """
-
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -366,19 +365,66 @@ class LightboxWindow(QMainWindow):
 
         start = QPushButton("Start Calibration")
         start.setObjectName("primaryButton")
+        start.clicked.connect(self.start_calibration)
 
         stop = QPushButton("Stop Calibration")
         stop.setObjectName("dangerButton")
+        stop.clicked.connect(self.stop_calibration)
+
+        # Save these as self variables so you can update them later
+        self.ambient_cal_status = QLabel("Ambient Calibration: Not Started")
+        self.ambient_cal_status.setObjectName("smallMuted")
+
+        self.glare_cal_status = QLabel("Glare Calibration: Not Started")
+        self.glare_cal_status.setObjectName("smallMuted")
+
+        self.cal_fault_status = QLabel("Faults: None Detected")
+        self.cal_fault_status.setObjectName("smallMuted")
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(start)
+        button_layout.addWidget(stop)
+        button_layout.addStretch()
 
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addSpacing(18)
-        card_layout.addWidget(start)
-        card_layout.addWidget(stop)
+        card_layout.addLayout(button_layout)
+        card_layout.addSpacing(18)
+
+        card_layout.addWidget(self.ambient_cal_status)
+        card_layout.addWidget(self.glare_cal_status)
+        card_layout.addWidget(self.cal_fault_status)
+
         card_layout.addStretch()
 
         layout.addWidget(card, 0, 0)
+
         return page
+    
+    def set_ambient_calibration_status(self, status):
+        self.ambient_cal_status.setText(f"Ambient Calibration: {status}")
+
+    def set_glare_calibration_status(self, status):
+        self.glare_cal_status.setText(f"Glare Calibration: {status}")
+
+    def set_calibration_fault_status(self, fault_detected):
+        if fault_detected:
+            self.cal_fault_status.setText("Faults: Detected")
+        else:
+            self.cal_fault_status.setText("Faults: None Detected")
+
+    def start_calibration(self):
+        self.set_ambient_calibration_status("Running")
+        self.set_glare_calibration_status("Waiting")
+        self.set_calibration_fault_status(False)
+
+        print("Calibration started")
+
+    def stop_calibration(self):
+        self.set_ambient_calibration_status("Stopped")
+        self.set_glare_calibration_status("Stopped")
+        print("Calibration stopped")
 
     def build_logs_tab(self):
         page = QWidget()
@@ -395,7 +441,7 @@ class LightboxWindow(QMainWindow):
         self.selected_driver = driver_number
 
         # ensure only that type of LED is on -- fix later
-        self.led_cleanup(0x02)
+        self.led_cleanup(0x06)
 
         self.selected_light_source_name = source_name
         self.selected_source_label.setText(f"Selected light source: {source_name}  |  Driver: {driver_number}")
@@ -568,6 +614,12 @@ class LightboxWindow(QMainWindow):
             step = 1000
 
         return (mlux // step) * step
+
+    def start_calibration(self):
+        self.calibration_page.set_ambient_status("running")
+        self.calibration_page.set_glare_status("not_started")
+        self.calibration_page.set_fault_status(False)
+        print("Calibration started")
 
     def apply_styles(self):
         self.setStyleSheet("""

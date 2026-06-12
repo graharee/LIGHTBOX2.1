@@ -21,7 +21,7 @@
 #define TMP1075_POINTER_SIZE        1u
 #define TMP1075_WRITE_SINGLE_SIZE   2u
 #define TMP1075_WRITE_WORD_SIZE     3u
-#define TMP1075_NUM_SENSORS         1u
+#define TMP1075_NUM_SENSORS         2u
 
 #define tmp1075_sensor_1_address   0x51
 #define tmp1075_sensor_2_address   0x49
@@ -39,9 +39,9 @@ static uint8_t tempFault = 0u;
 
 static const uint8_t tmp1075_sensor_addresses[TMP1075_NUM_SENSORS] =
 {
-    //tmp1075_sensor_1_address, // U2 -> 0b1010001, location: led side, middle top
-    //tmp1075_sensor_2_address, // U3 -> 0b1001001, location: led side, middle
-    tmp1075_sensor_3_address, // U4 -> 0b1000000, location: by driver u10
+    tmp1075_sensor_1_address, // U2 -> 0b1010001, location: led side, middle top
+    tmp1075_sensor_2_address, // U3 -> 0b1001001, location: led side, middle
+    tmp1075_sensor_3_address, // U4 -> 0b1000000, location: by driver u10 -- works
     //tmp1075_sensor_4_address, // U5 -> 0b1001000, location: led side, under u12
     //tmp1075_sensor_5_address, // U6 -> 0b1011000, location: led side, under u11
     //tmp1075_sensor_6_address, // U7 -> 0b1000001, location: led side, under u21

@@ -125,7 +125,7 @@ static const uint8_t sunlightLedRegs[NUM_LEDS_SUNLIGHT] =
     mbi6353q_bright_reg28, // LED 36
     mbi6353q_bright_reg22, // LED 37 
     mbi6353q_bright_reg42, // LED 38 
-    mbi6353q_bright_reg39, // LED 39 
+    mbi6353q_bright_reg40, // LED 39 
     mbi6353q_bright_reg35, // LED 40 
     mbi6353q_bright_reg31, // LED 41
     mbi6353q_bright_reg27, // LED 42 
@@ -276,7 +276,7 @@ void CAN_WriteAllLeds(uint8_t driver, uint8_t command, uint8_t data)
  ******************************************************************/
 void CAN_SetLedBrightness(uint8_t deviceNumber, uint8_t led, uint16_t brightness)
 {   
-    if (deviceNumber == 4u) // there are 48 sunlight leds :/
+    if (deviceNumber == 4u) // there are 48 sunlight leds 
     {
         if (led < 1 || led > NUM_LEDS_SUNLIGHT)
         {
