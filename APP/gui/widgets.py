@@ -15,6 +15,77 @@ from PySide6.QtWidgets import (
     QLineEdit,
 )
 
+
+class OptometerReadingCard(QFrame):
+    def __init__(self, title: str):
+        super().__init__()
+
+        self.setObjectName("optometerReadingCard")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+
+        self.title_label = QLabel(title)
+        self.title_label.setObjectName("optometerCardTitle")
+
+        value_row = QHBoxLayout()
+        value_row.setSpacing(8)
+
+        self.value_label = QLabel("0")
+        self.value_label.setObjectName("optometerValue")
+
+        self.unit_label = QLabel("")
+        self.unit_label.setObjectName("optometerUnit")
+
+        value_row.addWidget(self.value_label)
+        value_row.addWidget(self.unit_label)
+        value_row.addStretch()
+
+        status_row = QHBoxLayout()
+        status_row.setSpacing(8)
+
+        self.live_dot = QLabel()
+        self.live_dot.setFixedSize(9, 9)
+        self.live_dot.setObjectName("liveDot")
+
+        self.status_label = QLabel("Live")
+        self.status_label.setObjectName("optometerStatus")
+
+        status_row.addWidget(self.live_dot)
+        status_row.addWidget(self.status_label)
+        status_row.addStretch()
+
+        layout.addWidget(self.title_label)
+        layout.addStretch()
+        layout.addLayout(value_row)
+        layout.addLayout(status_row)
+
+        self.set_live(False)
+
+    def set_reading(self, value, unit=""):
+        if value is None:
+            self.value_label.setText("--")
+            self.unit_label.setText("")
+            self.set_live(False)
+            return
+    
+        self.value_label.setText(f"{value:.3g}")
+        self.unit_label.setText(unit)
+        self.set_live(True)
+
+    def set_live(self, live: bool):
+        if live:
+            self.status_label.setText("Live")
+            self.live_dot.setStyleSheet(
+                "background-color: #22c55e; border-radius: 4px;"
+            )
+        else:
+            self.status_label.setText("No Read")
+            self.live_dot.setStyleSheet(
+                "background-color: #ef4444; border-radius: 4px;"
+            )
+
 class StatusDot(QLabel):
     def __init__(self, color="gray", size=12):
         super().__init__()
@@ -42,7 +113,7 @@ class StatusDot(QLabel):
 
 
 class MetricCard(QFrame):
-    def __init__(self, title, value="0", unit="mlux", status="Live"):
+    def __init__(self, title, value="0", status="Live"):
         super().__init__()
         self.setObjectName("metricCard")
 

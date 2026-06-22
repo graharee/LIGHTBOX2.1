@@ -28,6 +28,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from calibration.visible_light_algorithm import (
+    COMMAND_CURRENT,
+    COMMAND_ALL_PWM,
+    COMMAND_SINGLE_PWM,
+    get_visible_commands,
+)
+
 from config.app_config import (
     PCAN_CONNECTION_CHECK_MS,
     CAN_RX_POLL_MS,
@@ -37,8 +44,17 @@ from config.app_config import (
     DRIVER_HEADLIGHT,
     DRIVER_SUNLIGHT,
 )
-from gui.widgets import StatusDot, MetricCard, FaultRow, LightSourceTile, AdjustmentCard
 
+from gui.widgets import (
+    StatusDot,
+    MetricCard,
+    FaultRow,
+    LightSourceTile,
+    AdjustmentCard,
+    OptometerReadingCard,
+)
+
+from calibration.optometer_interface import OptometerInterface
 
 class LightboxWindow(QMainWindow):
     def __init__(self, pcan):
@@ -58,6 +74,17 @@ class LightboxWindow(QMainWindow):
         self.apply_styles()
         self.connect_signals()
         self.start_timers()
+
+        self.optometer = OptometerInterface(port="COM10")
+        # self.optometer_timer = QTimer(self)
+        # self.optometer_timer.timeout.connect(self.update_optometer_boxes)
+        # self.optometer_timer.start(1000)
+
+        self.optometer_timer = QTimer(self)
+        self.optometer_timer.timeout.connect(self.update_optometer_boxes)
+        self.optometer_timer.start(1000)
+
+        print("[OPTOMETER] Timer started")
 
     def build_ui(self):
         root = QWidget()
@@ -194,8 +221,13 @@ class LightboxWindow(QMainWindow):
         readings_title.setObjectName("cardTitle")
 
         readings_grid = QGridLayout()
-        readings_grid.addWidget(MetricCard("Ambient", "0", "mlux"), 0, 0)
-        readings_grid.addWidget(MetricCard("Glare", "0", "mlux"), 0, 1)
+        readings_grid.setSpacing(12)
+
+        self.ambient_optometer_card = OptometerReadingCard("AMBIENT")
+        self.glare_optometer_card = OptometerReadingCard("GLARE")
+
+        readings_grid.addWidget(self.ambient_optometer_card, 0, 0)
+        readings_grid.addWidget(self.glare_optometer_card, 0, 1)
 
         readings_layout = QVBoxLayout(readings_panel)
         readings_layout.addWidget(readings_title)
@@ -246,6 +278,20 @@ class LightboxWindow(QMainWindow):
         layout.setColumnStretch(2, 2)
 
         return page
+    
+    def update_optometer_boxes(self):
+        try:
+            reading, unit = self.optometer.read_lux_value()
+
+            self.ambient_optometer_card.set_reading(reading, unit)
+            self.glare_optometer_card.set_reading(reading, unit)
+
+            print(f"[OPTOMETER] light value={reading} {unit}")
+
+        except Exception as e:
+            self.ambient_optometer_card.set_reading(None)
+            self.glare_optometer_card.set_reading(None)
+            print(f"[OPTOMETER ERROR] {e}")
 
     def build_advanced_tab(self):
         page = QWidget()
@@ -551,75 +597,60 @@ class LightboxWindow(QMainWindow):
 
     def send_visible_mlux_command(self, card, text):
         try:
-            mlux = int(text)
+            requested_mlux = int(text)
         except ValueError:
             self.add_log("[ERROR] Enter a valid mlux value.")
             self.set_invalid_input(True)
             return
 
-        if self.selected_driver not in [DRIVER_HEADLIGHT, DRIVER_SUNLIGHT]:
-            self.add_log("[ERROR] Select a visible light source first.")
+        can_id = self.get_can_id()
+        if can_id is None:
             self.set_invalid_input(True)
             return
 
-        can_id = self.get_can_id()
-        if can_id is None:
+        try:
+            rounded_mlux, commands = get_visible_commands(requested_mlux)
+        except ValueError as error:
+            self.add_log(f"[ERROR] {error}")
+            self.set_invalid_input(True)
             return
-        
-        mlux = self.normalize_mlux(mlux)
-        # then we will take this mlux value and figure out the corresponding settings
-        self.led_cleanup(can_id)
-        self.pcan.send_current(can_id, self.selected_driver, 4)
-        self.pcan.send_single_led_pwm(can_id, self.selected_driver, 0x19, 10)
 
-        card.set_last_sent(f"{mlux} mlux")
+        self.led_cleanup(can_id)
+
+        for command in commands:
+            command_type = command["type"]
+            driver = command["driver"]
+            value = command["value"]
+
+            if command_type == COMMAND_CURRENT:
+                self.pcan.send_current(can_id, driver, value)
+
+            elif command_type == COMMAND_ALL_PWM:
+                self.pcan.send_all_pwm(can_id, driver, value)
+
+            elif command_type == COMMAND_SINGLE_PWM:
+                led = command["led"]
+                self.pcan.send_single_led_pwm(can_id, driver, led, value)
+
+            else:
+                self.add_log(f"[ERROR] Unknown visible command type: {command_type}")
+                self.set_invalid_input(True)
+                return
+
+        card.set_last_sent(f"{rounded_mlux} mlux")
 
         self.set_invalid_input(False)
-        self.add_log("[INFO] 1 mlux command sent: 4 mA, 10% PWM")
+        self.add_log(
+            f"[INFO] Visible target sent: requested {requested_mlux} mlux, "
+            f"rounded to {rounded_mlux} mlux"
+        )
+    
 
     def led_cleanup(self, can_id):
         self.pcan.send_all_pwm(can_id, 1, 0)
         self.pcan.send_all_pwm(can_id, 2, 0)
         self.pcan.send_all_pwm(can_id, 3, 0)
         self.pcan.send_all_pwm(can_id, 4, 0)
-
-    def normalize_mlux(self, mlux):
-        """
-        Rounds DOWN to the nearest valid increment.
-
-        Ranges:
-        0-1000 mlux     -> 1 mlux steps
-        1000-5000 mlux  -> 5 mlux steps
-        5000-25000 mlux -> 10 mlux steps
-        25000-100000 mlux -> 50 mlux steps
-        100000-1000000 mlux -> 1000 mlux (1 lux) steps
-        """
-
-        if mlux < 0:
-            return 0
-
-        if mlux <= 1000:
-            step = 1
-
-        elif mlux <= 5000:
-            step = 5
-
-        elif mlux <= 25000:
-            step = 10
-
-        elif mlux <= 100000:
-            step = 50
-
-        else:
-            step = 1000
-
-        return (mlux // step) * step
-
-    def start_calibration(self):
-        self.calibration_page.set_ambient_status("running")
-        self.calibration_page.set_glare_status("not_started")
-        self.calibration_page.set_fault_status(False)
-        print("Calibration started")
 
     def apply_styles(self):
         self.setStyleSheet("""
@@ -806,5 +837,38 @@ class LightboxWindow(QMainWindow):
                 padding: 14px;
                 font-family: Consolas;
                 font-size: 13px;
+            }
+                           
+            #optometerReadingCard {
+                background-color: white;
+                border: 1px solid #D8DEE8;
+                border-radius: 18px;
+                min-width: 160px;
+                min-height: 130px;
+            }
+
+            #optometerCardTitle {
+                color: #64748B;
+                font-size: 15px;
+                font-weight: 800;
+                text-transform: uppercase;
+            }
+
+            #optometerValue {
+                color: #111827;
+                font-size: 40px;
+                font-weight: 650;
+            }
+
+            #optometerUnit {
+                color: #64748B;
+                font-size: 18px;
+                font-weight: 800;
+                padding-top: 16px;
+            }
+
+            #optometerStatus {
+                color: #64748B;
+                font-size: 14px;
             }
         """)

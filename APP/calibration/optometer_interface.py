@@ -1,43 +1,65 @@
-"""
-Optometer interface.
+import serial
+import time
 
-This file will eventually handle communication with the
-Gigahertz-Optik S380 optometer through GPIB-USB.
-
-For now, this is a skeleton with placeholder behavior.
-"""
 
 class OptometerInterface:
-    def __init__(self):
-        self.connected = False
+    def __init__(self, port="COM10", baudrate=9600, timeout=1.0):
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self.ser = None
 
     def connect(self):
-        """
-        Connect to the optometer.
+        if self.ser is not None and self.ser.is_open:
+            return True
 
-        Later this is where you would initialize the GPIB connection.
-        """
-        print("Connecting to optometer...")
-        self.connected = True
-        return self.connected
+        self.ser = serial.Serial(
+            port=self.port,
+            baudrate=self.baudrate,
+            timeout=self.timeout,
+        )
+        return self.ser.is_open
 
     def disconnect(self):
-        """
-        Disconnect from the optometer.
-        """
-        print("Disconnecting optometer...")
-        self.connected = False
+        if self.ser is not None and self.ser.is_open:
+            self.ser.close()
 
-    def read_mlux(self):
-        """
-        Read the current light level from the optometer in mlux.
+    def is_connected(self):
+        return self.ser is not None and self.ser.is_open
 
-        Placeholder value for now.
-        Later, replace this with the real optometer read command.
-        """
-        if not self.connected:
-            raise RuntimeError("Optometer is not connected.")
+    def read_measurement(self):
+        if not self.is_connected():
+            self.connect()
 
-        measured_mlux = 0.0
+        self.ser.reset_input_buffer()
+        self.ser.write(b"READ?\r")
+        time.sleep(0.2)
 
-        return measured_mlux
+        response = self.ser.read_all().decode("ascii", errors="ignore").strip()
+
+        if not response:
+            raise RuntimeError("No response from optometer.")
+
+        return response
+
+    def read_lux_value(self):
+        response = self.read_measurement()
+    
+        parts = response.replace(",", " ").split()
+        print(parts)
+    
+        value = None
+        unit = ""
+    
+        for part in parts:
+            try:
+                value = float(part)
+            except ValueError:
+                # keep possible unit strings like lx, lux, mlux, etc.
+                if part.lower() not in ["read", "read?"]:
+                    unit = part
+    
+        if value is None:
+            raise ValueError(f"Could not parse optometer response: {response!r}")
+    
+        return value, unit
