@@ -10,7 +10,8 @@ Important architecture:
     - PCB address is the CAN ID.
     - LED address 0x00 means "all LEDs".
 """
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QThread, QObject, Signal
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -26,13 +27,26 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QSlider,
 )
+
+from calibration.formation_calibrator import FormationCalibrator
 
 from calibration.visible_light_algorithm import (
     COMMAND_CURRENT,
     COMMAND_ALL_PWM,
     COMMAND_SINGLE_PWM,
     get_visible_commands,
+    GLARE_PCB_IDS,
+    AMBIENT_PCB_IDS,
+    CALIBRATION_FORMATIONS,
+    HEADLIGHT_FORMATION_LOWEST,
+    HEADLIGHT_FORMATION_MIDLOWEST,
+    HEADLIGHT_FORMATION_MID,
+    HEADLIGHT_FORMATION_MIDHIGH,
+    HEADLIGHT_FORMATION_HIGH,
+    HEADLIGHT_FORMATION_NEXTHIGH,
+    HEADLIGHT_FORMATION_ALMOSTHIGH,
 )
 
 from config.app_config import (
@@ -56,11 +70,64 @@ from gui.widgets import (
 
 from calibration.optometer_interface import OptometerInterface
 
+class CalibrationWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+    log = Signal(str)
+
+    def __init__(
+        self,
+        can_interface,
+        optometer,
+        formation_name,
+        formation_commands,
+        output_csv,
+        min_current_ma,
+        max_current_ma,
+        min_pwm,
+        max_pwm,
+        pwm_step,
+        settle_time_s,
+    ):
+        super().__init__()
+
+        self.calibrator = FormationCalibrator(
+            can_interface=can_interface,
+            optometer=optometer,
+            formation_name=formation_name,
+            formation_commands=formation_commands,
+            output_csv=output_csv,
+            min_current_ma=min_current_ma,
+            max_current_ma=max_current_ma,
+            min_pwm=min_pwm,
+            max_pwm=max_pwm,
+            pwm_step=pwm_step,
+            settle_time_s=settle_time_s,
+        )
+
+    def run(self):
+        try:
+            self.log.emit("[INFO] Calibration sweep started.")
+            self.calibrator.run()
+            self.log.emit("[INFO] Calibration sweep finished.")
+            self.finished.emit()
+
+        except Exception as error:
+            self.error.emit(str(error))
+            self.finished.emit()
+
+    def stop(self):
+        self.calibrator.request_stop()
+        self.log.emit("[INFO] Calibration stop requested.")
+
 class LightboxWindow(QMainWindow):
     def __init__(self, pcan):
         super().__init__()
 
         self.pcan = pcan
+
+        self.calibration_thread = None
+        self.calibration_worker = None
 
         self.selected_driver = None
         self.selected_light_source_name = "None"
@@ -207,9 +274,73 @@ class LightboxWindow(QMainWindow):
 
         self.visible_ambient_card.send_requested.connect(self.send_visible_mlux_command)
         self.visible_glare_card.send_requested.connect(self.send_visible_mlux_command)
-
+        
         adjustment_layout.addWidget(self.visible_ambient_card)
         adjustment_layout.addWidget(self.visible_glare_card)
+
+        # ------------------------------------------------------------
+        # Formation test controls
+        # ------------------------------------------------------------
+        formation_title = QLabel("Formation Test Control")
+        formation_title.setObjectName("cardTitle")
+
+        formation_subtitle = QLabel(
+            "Adjust current and PWM only for the LEDs in the low-light formation."
+        )
+        formation_subtitle.setObjectName("smallMuted")
+
+        self.formation_current_label = QLabel("Current: 4 mA")
+        self.formation_current_label.setObjectName("sentValue")
+
+        self.formation_current_slider = QSlider(Qt.Horizontal)
+        self.formation_current_slider.setMinimum(4)
+        self.formation_current_slider.setMaximum(60)
+        self.formation_current_slider.setValue(4)
+        self.formation_current_slider.setSingleStep(1)
+        self.formation_current_slider.setPageStep(5)
+        self.formation_current_slider.setTickInterval(4)
+        self.formation_current_slider.setTickPosition(QSlider.TicksBelow)
+        self.formation_current_slider.valueChanged.connect(
+            self.update_formation_test_preview
+        )
+
+        self.formation_pwm_label = QLabel("PWM: 13%")
+        self.formation_pwm_label.setObjectName("sentValue")
+
+        self.formation_pwm_slider = QSlider(Qt.Horizontal)
+        self.formation_pwm_slider.setMinimum(0)
+        self.formation_pwm_slider.setMaximum(100)
+        self.formation_pwm_slider.setValue(13)
+        self.formation_pwm_slider.setSingleStep(1)
+        self.formation_pwm_slider.setPageStep(5)
+        self.formation_pwm_slider.setTickInterval(10)
+        self.formation_pwm_slider.setTickPosition(QSlider.TicksBelow)
+        self.formation_pwm_slider.valueChanged.connect(
+            self.update_formation_test_preview
+        )
+
+        send_formation_button = QPushButton("Send to Formation")
+        send_formation_button.setObjectName("primaryButton")
+        send_formation_button.clicked.connect(self.send_formation_test_command)
+
+        off_formation_button = QPushButton("Turn Formation Off")
+        off_formation_button.setObjectName("dangerButton")
+        off_formation_button.clicked.connect(self.turn_formation_test_off)
+
+        formation_button_row = QHBoxLayout()
+        formation_button_row.addWidget(send_formation_button)
+        formation_button_row.addWidget(off_formation_button)
+
+        adjustment_layout.addSpacing(20)
+        adjustment_layout.addWidget(formation_title)
+        adjustment_layout.addWidget(formation_subtitle)
+        adjustment_layout.addSpacing(8)
+        adjustment_layout.addWidget(self.formation_current_label)
+        adjustment_layout.addWidget(self.formation_current_slider)
+        adjustment_layout.addWidget(self.formation_pwm_label)
+        adjustment_layout.addWidget(self.formation_pwm_slider)
+        adjustment_layout.addLayout(formation_button_row)
+
         adjustment_layout.addStretch()
 
         readings_panel = QFrame()
@@ -338,6 +469,14 @@ class LightboxWindow(QMainWindow):
         send_button.setObjectName("primaryButton")
         send_button.clicked.connect(self.send_advanced_command)
 
+        send_glare_all_button = QPushButton("Send to All Glare PCBs")
+        send_glare_all_button.setObjectName("primaryButton")
+        send_glare_all_button.clicked.connect(self.send_advanced_command_to_all_glare)
+
+        send_ambient_all_button = QPushButton("Send to All Ambient PCBs")
+        send_ambient_all_button.setObjectName("primaryButton")
+        send_ambient_all_button.clicked.connect(self.send_advanced_command_to_all_ambient)
+
         control_layout.addWidget(title)
         control_layout.addWidget(subtitle)
         control_layout.addSpacing(12)
@@ -355,6 +494,8 @@ class LightboxWindow(QMainWindow):
         control_layout.addWidget(self.send_current_checkbox)
         control_layout.addSpacing(14)
         control_layout.addWidget(send_button)
+        control_layout.addWidget(send_glare_all_button)
+        control_layout.addWidget(send_ambient_all_button)
         control_layout.addStretch()
 
         temp_card = QFrame()
@@ -460,17 +601,182 @@ class LightboxWindow(QMainWindow):
         else:
             self.cal_fault_status.setText("Faults: None Detected")
 
+    def build_calibration_commands_from_formation(self, formation, current_ma=4, pwm=10, driver=DRIVER_HEADLIGHT,):
+        commands = []
+
+        for can_id, led_list in formation.items():
+            commands.append(
+                {
+                    "can_id": can_id,
+                    "type": COMMAND_CURRENT,
+                    "driver": driver,
+                    "value": current_ma,
+                }
+            )
+
+            for led in led_list:
+                if led == 0:
+                    commands.append(
+                        {
+                            "can_id": can_id,
+                            "type": COMMAND_ALL_PWM,
+                            "driver": driver,
+                            "value": pwm,
+                        }
+                    )
+                else:
+                    commands.append(
+                        {
+                            "can_id": can_id,
+                            "type": COMMAND_SINGLE_PWM,
+                            "driver": driver,
+                            "led": led,
+                            "value": pwm,
+                        }
+                    )
+
+        return commands
+
+    def build_all_led_calibration_commands(self, pcb_ids, current_ma=4, pwm=10, driver=DRIVER_HEADLIGHT,):
+        commands = []
+
+        for can_id in pcb_ids:
+            commands.append(
+                {
+                    "can_id": can_id,
+                    "type": COMMAND_CURRENT,
+                    "driver": driver,
+                    "value": current_ma,
+                }
+            )
+
+            commands.append(
+                {
+                    "can_id": can_id,
+                    "type": COMMAND_ALL_PWM,
+                    "driver": driver,
+                    "value": pwm,
+                }
+            )
+
+        return commands
+
     def start_calibration(self):
-        self.set_ambient_calibration_status("Running")
-        self.set_glare_calibration_status("Waiting")
+        if self.calibration_thread is not None:
+            self.add_log("[WARNING] Calibration is already running.")
+            return
+
+        self.optometer_timer.stop()
+        self.add_log("[INFO] Optometer display timer paused during calibration.")
+
+        self.led_cleanup_all_pcbs()
+
+        self.set_ambient_calibration_status("Waiting")
+        self.set_glare_calibration_status("Running")
         self.set_calibration_fault_status(False)
 
-        print("Calibration started")
+        self.calibration_fault.set_status("green")
+
+        selected_formation_key = "formation_8_highest_light" # change here for formation
+        formation_config = CALIBRATION_FORMATIONS[selected_formation_key]
+
+        formation_commands = self.build_calibration_commands_from_formation(
+            formation_config["formation"],
+            current_ma=formation_config["min_current_ma"],
+            pwm=formation_config["min_pwm"],
+            driver=formation_config["driver"],
+        )
+        # formation_commands = self.build_all_led_calibration_commands(
+        #     pcb_ids=[0x02, 0x03, 0x04, 0x05, 0x06, 0x07],
+        #     current_ma=4,
+        #     pwm=10,
+        #     driver=DRIVER_HEADLIGHT,
+        # )
+        
+        self.calibration_thread = QThread(self)
+
+        self.calibration_worker = CalibrationWorker(
+            can_interface=self.pcan,
+            optometer=self.optometer,
+            formation_name=formation_config["name"],
+            formation_commands=formation_commands,
+            output_csv=formation_config["output_csv"],
+            min_current_ma=formation_config["min_current_ma"],
+            max_current_ma=formation_config["max_current_ma"],
+            min_pwm=formation_config["min_pwm"],
+            max_pwm=formation_config["max_pwm"],
+            pwm_step=formation_config["pwm_step"],
+            settle_time_s=formation_config["settle_time_s"],
+        )
+
+        # self.calibration_thread = QThread(self)
+
+        # self.calibration_worker = CalibrationWorker(
+        #     can_interface=self.pcan,
+        #     optometer=self.optometer,
+        #     formation_name="headlight_all_leds",
+        #     formation_commands=formation_commands,
+        #     output_csv="headlight_all_leds_calibration.csv",
+        #     min_current_ma=4,
+        #     max_current_ma=50,
+        #     min_pwm=10,
+        #     max_pwm=100,
+        #     pwm_step=5,
+        #     settle_time_s=2.0,
+        # )
+
+        self.calibration_worker.moveToThread(self.calibration_thread)
+
+        self.calibration_thread.started.connect(self.calibration_worker.run)
+
+        self.calibration_worker.log.connect(self.add_log)
+        self.calibration_worker.error.connect(self.handle_calibration_error)
+        self.calibration_worker.finished.connect(self.handle_calibration_finished)
+
+        self.calibration_worker.finished.connect(self.calibration_thread.quit)
+        self.calibration_worker.finished.connect(self.calibration_worker.deleteLater)
+
+        self.calibration_thread.finished.connect(self.calibration_thread.deleteLater)
+        self.calibration_thread.finished.connect(self.clear_calibration_thread)
+
+        self.calibration_thread.start()
+
+        self.add_log(f"[INFO] Glare calibration started: {formation_config['name']}")
 
     def stop_calibration(self):
+        if self.calibration_worker is not None:
+            self.calibration_worker.stop()
+
         self.set_ambient_calibration_status("Stopped")
-        self.set_glare_calibration_status("Stopped")
-        print("Calibration stopped")
+        self.set_glare_calibration_status("Stopping")
+
+        self.add_log("[INFO] Calibration stopping...")
+    
+    def handle_calibration_error(self, error_text):
+        self.set_ambient_calibration_status("Waiting")
+        self.set_glare_calibration_status("Error")
+        self.set_calibration_fault_status(True)
+        self.calibration_fault.set_status("red")
+
+        self.add_log(f"[ERROR] Calibration failed: {error_text}")
+
+
+    def handle_calibration_finished(self):
+        self.set_ambient_calibration_status("Waiting")
+        self.set_glare_calibration_status("Finished")
+        self.set_calibration_fault_status(False)
+        self.calibration_fault.set_status("gray")
+
+        self.led_cleanup_all_pcbs()
+
+        self.optometer_timer.start(1000)
+
+        self.add_log("[INFO] Calibration finished and LEDs turned off.")
+
+
+    def clear_calibration_thread(self):
+        self.calibration_thread = None
+        self.calibration_worker = None
 
     def build_logs_tab(self):
         page = QWidget()
@@ -486,8 +792,7 @@ class LightboxWindow(QMainWindow):
     def set_selected_light_source(self, driver_number, source_name):
         self.selected_driver = driver_number
 
-        # ensure only that type of LED is on -- fix later
-        self.led_cleanup(0x06)
+        self.led_cleanup_all_pcbs()
 
         self.selected_light_source_name = source_name
         self.selected_source_label.setText(f"Selected light source: {source_name}  |  Driver: {driver_number}")
@@ -509,7 +814,7 @@ class LightboxWindow(QMainWindow):
             self.set_invalid_input(True)
             return None
 
-        if can_id < 0x02 or can_id > 0x29:
+        if can_id < 0x02 or can_id > 0xD:
             self.add_log("[ERROR] PCB CAN ID must be between 0x02 and 0x29")
             self.set_invalid_input(True)
             return None
@@ -547,6 +852,58 @@ class LightboxWindow(QMainWindow):
                 self.pcan.send_all_pwm(can_id, self.selected_driver, pwm)
             else:
                 self.pcan.send_single_led_pwm(can_id, self.selected_driver, led_address, pwm)
+
+    def send_advanced_command_to_all_glare(self):
+        self.send_advanced_command_to_pcb_group(
+            pcb_ids=GLARE_PCB_IDS,
+            group_name="glare",
+        )
+
+
+    def send_advanced_command_to_all_ambient(self):
+        self.send_advanced_command_to_pcb_group(
+            pcb_ids=AMBIENT_PCB_IDS,
+            group_name="ambient",
+        )
+
+
+    def send_advanced_command_to_pcb_group(self, pcb_ids, group_name):
+        if self.selected_driver is None:
+            self.add_log("[ERROR] Select a light source on the Basic tab first.")
+            self.set_invalid_input(True)
+            return
+
+        if not self.send_current_checkbox.isChecked() and not self.send_pwm_checkbox.isChecked():
+            self.add_log("[ERROR] Select Send PWM and/or Send current.")
+            self.set_invalid_input(True)
+            return
+
+        led_address = self.led_address_input.value()
+        pwm = self.pwm_input.value()
+        current = self.current_input.value()
+
+        self.set_invalid_input(False)
+
+        for can_id in pcb_ids:
+            if self.send_current_checkbox.isChecked():
+                self.pcan.send_current(can_id, self.selected_driver, current)
+
+            if self.send_pwm_checkbox.isChecked():
+                if led_address == 0:
+                    self.pcan.send_all_pwm(can_id, self.selected_driver, pwm)
+                else:
+                    self.pcan.send_single_led_pwm(
+                        can_id,
+                        self.selected_driver,
+                        led_address,
+                        pwm,
+                    )
+
+        self.add_log(
+            f"[INFO] Advanced command sent to all {group_name} PCBs: "
+            f"{len(pcb_ids)} board(s), driver {self.selected_driver}, "
+            f"LED {led_address}, current {current} mA, PWM {pwm}%"
+        )
 
     def update_connection_status(self, connected):
         if connected:
@@ -603,21 +960,26 @@ class LightboxWindow(QMainWindow):
             self.set_invalid_input(True)
             return
 
-        can_id = self.get_can_id()
-        if can_id is None:
+        if card == self.visible_glare_card:
+            mode = "glare"
+        elif card == self.visible_ambient_card:
+            mode = "ambient"
+        else:
+            self.add_log("[ERROR] Unknown visible light card.")
             self.set_invalid_input(True)
             return
 
         try:
-            rounded_mlux, commands = get_visible_commands(requested_mlux)
+            rounded_mlux, commands = get_visible_commands(requested_mlux, mode)
         except ValueError as error:
             self.add_log(f"[ERROR] {error}")
             self.set_invalid_input(True)
             return
 
-        self.led_cleanup(can_id)
+        self.led_cleanup_all_pcbs()
 
         for command in commands:
+            can_id = command["can_id"]
             command_type = command["type"]
             driver = command["driver"]
             value = command["value"]
@@ -641,16 +1003,75 @@ class LightboxWindow(QMainWindow):
 
         self.set_invalid_input(False)
         self.add_log(
-            f"[INFO] Visible target sent: requested {requested_mlux} mlux, "
-            f"rounded to {rounded_mlux} mlux"
+            f"[INFO] Visible {mode} target sent: requested {requested_mlux} mlux, "
+            f"rounded to {rounded_mlux} mlux, {len(commands)} command(s) sent"
         )
-    
 
-    def led_cleanup(self, can_id):
-        self.pcan.send_all_pwm(can_id, 1, 0)
-        self.pcan.send_all_pwm(can_id, 2, 0)
-        self.pcan.send_all_pwm(can_id, 3, 0)
-        self.pcan.send_all_pwm(can_id, 4, 0)
+    def update_formation_test_preview(self):
+        current_ma = self.formation_current_slider.value()
+        pwm = self.formation_pwm_slider.value()
+
+        self.formation_current_label.setText(f"Current: {current_ma} mA")
+        self.formation_pwm_label.setText(f"PWM: {pwm}%")
+
+
+    def send_formation_test_command(self):
+        """
+        Send current and PWM only to the LEDs in the low-light formation.
+        This does not turn on all LEDs.
+        """
+
+        current_ma = self.formation_current_slider.value()
+        pwm = self.formation_pwm_slider.value()
+
+        # For this test formation, force headlight driver.
+        driver = DRIVER_HEADLIGHT
+
+        self.led_cleanup_all_pcbs()
+
+        for can_id, led_list in HEADLIGHT_FORMATION_ALMOSTHIGH.items():
+            self.pcan.send_current(can_id, driver, current_ma)
+
+            for led in led_list:
+                if led == 0:
+                    self.pcan.send_all_pwm(can_id, driver, pwm)
+                else:
+                    self.pcan.send_single_led_pwm(can_id, driver, led, pwm)
+
+        self.set_invalid_input(False)
+
+        self.add_log(
+            f"[INFO] Formation test sent: "
+            f"{current_ma} mA, {pwm}% PWM, "
+            f"{len(HEADLIGHT_FORMATION_ALMOSTHIGH)} PCB(s)"
+        )
+
+
+    def turn_formation_test_off(self):
+        """
+        Turn off only the LEDs in the low-light formation.
+        """
+
+        driver = DRIVER_HEADLIGHT # change later
+
+        for can_id, led_list in HEADLIGHT_FORMATION_ALMOSTHIGH.items():
+            for led in led_list:
+                if led == 0:
+                    self.pcan.send_all_pwm(can_id, driver, 0)
+                else:
+                    self.pcan.send_single_led_pwm(can_id, driver, led, 0)
+
+        self.add_log("[INFO] Formation test LEDs turned off.")
+
+    def led_cleanup_all_pcbs(self):
+        visible_pcb_ids = [
+            0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+            # 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
+        ]
+
+        for can_id in visible_pcb_ids:
+            self.pcan.send_all_pwm(can_id, DRIVER_HEADLIGHT, 0)
+            self.pcan.send_all_pwm(can_id, DRIVER_SUNLIGHT, 0)
 
     def apply_styles(self):
         self.setStyleSheet("""
